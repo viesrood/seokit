@@ -198,7 +198,10 @@ class SchemaService extends Component
             $node['primaryImageOfPage'] = $image;
         }
 
-        if ($resolution->getArray('breadcrumbs') !== []) {
+        // Alleen verwijzen naar een node die er ook echt komt. De homepage
+        // heeft maar een kruimel en krijgt dus geen BreadcrumbList; zonder
+        // deze zelfde voorwaarde verwees de WebPage daar naar niets.
+        if ($this->hasBreadcrumbs($resolution)) {
             $node['breadcrumb'] = ['@id' => $this->pageId($resolution) . '-breadcrumb'];
         }
 
@@ -350,13 +353,11 @@ class SchemaService extends Component
      */
     private function breadcrumbList(MetaResolution $resolution): ?array
     {
-        $crumbs = $resolution->getArray('breadcrumbs');
-
-        // A single crumb is the homepage pointing at itself, which tells a
-        // search engine nothing it did not already know.
-        if (count($crumbs) < 2) {
+        if (!$this->hasBreadcrumbs($resolution)) {
             return null;
         }
+
+        $crumbs = $resolution->getArray('breadcrumbs');
 
         $items = [];
         $position = 1;
@@ -379,6 +380,17 @@ class SchemaService extends Component
             '@id' => $this->pageId($resolution) . '-breadcrumb',
             'itemListElement' => $items,
         ];
+    }
+
+    /**
+     * Whether this page has a trail worth publishing.
+     *
+     * A single crumb is the homepage pointing at itself, which tells a search
+     * engine nothing it did not already know.
+     */
+    private function hasBreadcrumbs(MetaResolution $resolution): bool
+    {
+        return count($resolution->getArray('breadcrumbs')) >= 2;
     }
 
     /**
