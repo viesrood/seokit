@@ -46,6 +46,19 @@ class Settings extends Model
     public bool $homeTitleIsSiteName = true;
 
     /**
+     * Run titles typed into the SEO field, or set from a template, through the
+     * pattern above as well.
+     *
+     * On by default because it is what every other SEO plugin does, and
+     * therefore what the titles already in a site were written for: an editor
+     * who typed "Impactvolle branding voor Nieuwe Energie Overijssel" was
+     * writing the part after the site name, not the whole tag. Turning it off
+     * makes an override literally the whole title, which is the cleaner rule
+     * but a surprise on a site migrated from anywhere else.
+     */
+    public bool $applyTitlePatternToOverrides = true;
+
+    /**
      * Hard cap for a derived description, in characters. Google truncates
      * around 155 to 160 on desktop and shorter on mobile; the cap only
      * applies to text SeoKit writes itself, never to what someone typed.

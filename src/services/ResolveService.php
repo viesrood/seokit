@@ -574,9 +574,15 @@ class ResolveService extends Component
         // An override is used verbatim; a derived title gets the site name
         // appended, unless it is the homepage, where the site name alone
         // reads better than "Home - Viesrood".
+        // An override only escapes the pattern when the site says overrides
+        // are the whole title. Otherwise it is treated like any other title,
+        // which is what a writer coming from SEOmatic or Yoast expects.
+        $literalOverrides = !($settings?->applyTitlePatternToOverrides ?? true);
         $titleSource = $resolution->origin('title')['source'] ?? '';
-        $needsTemplate = !$resolution->getBool('titleIsExact')
-            && $titleSource !== MetaResolution::SOURCE_TEMPLATE;
+        $isOverride = $resolution->getBool('titleIsExact')
+            || $titleSource === MetaResolution::SOURCE_TEMPLATE;
+
+        $needsTemplate = !($literalOverrides && $isOverride);
 
         if ($needsTemplate && $title !== '' && $siteName !== '') {
             if ($resolution->getBool('isHome') && ($settings?->homeTitleIsSiteName ?? true)) {
