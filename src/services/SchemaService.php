@@ -56,7 +56,7 @@ class SchemaService extends Component
             return null;
         }
 
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
 
         if ($settings === null) {
             return null;
@@ -110,28 +110,28 @@ class SchemaService extends Component
      */
     public function organization(): array
     {
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
 
         $node = [
-            '@type' => $settings?->organizationType ?? 'Organization',
+            '@type' => $settings->organizationType,
             '@id' => $this->organizationId(),
-            'name' => $settings?->resolvedOrganizationName() ?? '',
+            'name' => $settings->resolvedOrganizationName() ?? '',
             'url' => UrlHelper::siteUrl('/'),
         ];
 
-        if (($settings?->organizationLegalName ?? '') !== '') {
-            $node['legalName'] = $settings?->organizationLegalName;
+        if ($settings->organizationLegalName !== '') {
+            $node['legalName'] = $settings->organizationLegalName;
         }
 
-        if (($settings?->email ?? '') !== '') {
-            $node['email'] = $settings?->email;
+        if ($settings->email !== '') {
+            $node['email'] = $settings->email;
         }
 
-        if (($settings?->telephone ?? '') !== '') {
-            $node['telephone'] = $settings?->telephone;
+        if ($settings->telephone !== '') {
+            $node['telephone'] = $settings->telephone;
         }
 
-        $logo = $this->imageNode($this->asset($settings?->organizationLogoId), '#logo');
+        $logo = $this->imageNode($this->asset($settings->organizationLogoId), '#logo');
         if ($logo !== null) {
             $node['logo'] = $logo;
 
@@ -141,7 +141,7 @@ class SchemaService extends Component
             $node['image'] = ['@id' => $logo['@id']];
         }
 
-        $sameAs = array_values(array_filter(array_map('trim', $settings?->sameAs ?? [])));
+        $sameAs = array_values(array_filter(array_map('trim', $settings->sameAs)));
         if ($sameAs !== []) {
             $node['sameAs'] = $sameAs;
         }
@@ -159,14 +159,14 @@ class SchemaService extends Component
      */
     private function website(): array
     {
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
         $site = Craft::$app->getSites()->getCurrentSite();
 
         return [
             '@type' => 'WebSite',
             '@id' => $this->websiteId(),
             'url' => UrlHelper::siteUrl('/'),
-            'name' => $settings?->resolvedSiteName() ?? (string)$site->getName(),
+            'name' => $settings->resolvedSiteName() ?? (string)$site->getName(),
             'publisher' => ['@id' => $this->organizationId()],
             'inLanguage' => (string)$site->language,
         ];
@@ -579,7 +579,7 @@ class SchemaService extends Component
      */
     private function findPersonPage(string $name): ?string
     {
-        $resolve = Plugin::getInstance()?->getResolve();
+        $resolve = Plugin::getInstance()->getResolve();
 
         if ($resolve === null) {
             return null;
@@ -612,7 +612,7 @@ class SchemaService extends Component
      */
     private function localBusinessNode(array $base): array
     {
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
 
         $node = [
             '@type' => 'LocalBusiness',
@@ -625,12 +625,12 @@ class SchemaService extends Component
             $node['address'] = $address;
         }
 
-        if (($settings?->telephone ?? '') !== '') {
-            $node['telephone'] = $settings?->telephone;
+        if ($settings->telephone !== '') {
+            $node['telephone'] = $settings->telephone;
         }
 
-        if (($settings?->email ?? '') !== '') {
-            $node['email'] = $settings?->email;
+        if ($settings->email !== '') {
+            $node['email'] = $settings->email;
         }
 
         $openingstijden = $this->openingHours();
@@ -648,7 +648,7 @@ class SchemaService extends Component
      */
     private function openingHours(): array
     {
-        $ruw = (string)(Plugin::getInstance()?->getSettings()->openingHours ?? '');
+        $ruw = (string)(Plugin::getInstance()->getSettings()->openingHours);
 
         if (trim($ruw) === '') {
             return [];
@@ -664,7 +664,7 @@ class SchemaService extends Component
      */
     private function addressNode(): ?array
     {
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
 
         if ($settings === null || $settings->streetAddress === '' || $settings->addressLocality === '') {
             return null;

@@ -37,8 +37,8 @@ class RobotsService extends Component
             ]);
         }
 
-        $settings = Plugin::getInstance()?->getSettings();
-        $body = (string)($settings?->robotsTxt ?? '');
+        $settings = Plugin::getInstance()->getSettings();
+        $body = (string)$settings->robotsTxt;
 
         if (trim($body) === '') {
             $body = "User-agent: *\nAllow: /\n\nSitemap: {sitemap}\n";
@@ -55,7 +55,7 @@ class RobotsService extends Component
      */
     public function isProduction(): bool
     {
-        $environments = Plugin::getInstance()?->getSettings()->productionEnvironments ?? [];
+        $environments = Plugin::getInstance()->getSettings()->productionEnvironments;
         $current = strtolower((string)Craft::$app->env);
 
         foreach ($environments as $environment) {

@@ -100,7 +100,7 @@ class SeoData extends Model implements JsonSerializable
     }
 
     /**
-     * @return array<int, array<int, mixed>>
+     * @return array<int, array<int|string, mixed>>
      */
     public function defineRules(): array
     {

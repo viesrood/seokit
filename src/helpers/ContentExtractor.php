@@ -204,13 +204,13 @@ final class ContentExtractor
             return;
         }
 
-        // Table and dropdown-ish values: a single scalar is occasionally a
-        // usable line of text, an array of settings never is.
-        if (is_scalar($value) && !is_bool($value) && !is_numeric($value)) {
-            $this->takeText((string)$value, $handle);
-        }
+        // Anything left here is a number, a boolean or a structure. None of
+        // those is a sentence: strings and Stringables were handled above.
     }
 
+    /**
+     * @param ElementQuery<int, ElementInterface>|ElementCollection<int, ElementInterface> $value
+     */
     private function readElements(ElementQuery|ElementCollection $value, string $handle, int $depth): void
     {
         if ($this->blocksVisited >= self::BLOCK_BUDGET) {

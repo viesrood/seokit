@@ -21,7 +21,14 @@ final class Text
             return '';
         }
 
-        $text = preg_replace('/<(br|\/p|\/h[1-6]|\/li|\/div|\/td)[^>]*>/i', ' ', $html) ?? $html;
+        // Opening tags as well as closing ones. Only closing tags separates
+        // "twee<li>drie</li>" into "tweedrie": the text before a list runs
+        // straight into its first item.
+        $text = preg_replace(
+            '/<\/?(br|p|h[1-6]|li|div|td|tr|section|article|blockquote)[^>]*>/i',
+            ' ',
+            $html,
+        ) ?? $html;
         $text = strip_tags($text);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
@@ -79,7 +86,10 @@ final class Text
             $byteOffset = (int)$last[1];
             $charOffset = mb_strlen(substr($window, 0, $byteOffset));
 
-            if ($charOffset > (int)($length * 0.5)) {
+            // Half the budget counts as enough: a sentence that ends exactly
+            // there is still a whole sentence, and a whole sentence beats a
+            // longer fragment.
+            if ($charOffset >= (int)($length * 0.5)) {
                 return trim(mb_substr($text, 0, $charOffset + 1));
             }
         }

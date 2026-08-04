@@ -120,7 +120,7 @@ class SeoField extends Field
         // become the placeholders, so an editor sees the real title and
         // description rather than an empty box that implies something is
         // missing.
-        $derived = Plugin::getInstance()?->getResolve()->forElement($element, false, false);
+        $derived = Plugin::getInstance()->getResolve()->forElement($element, false, false);
 
         return $view->renderTemplate('seokit/_field', [
             'id' => $view->formatInputId($this->handle),
@@ -130,7 +130,7 @@ class SeoField extends Field
             'value' => $value,
             'element' => $element,
             'derived' => $derived,
-            'descriptionLength' => Plugin::getInstance()?->getSettings()->descriptionLength ?? 155,
+            'descriptionLength' => Plugin::getInstance()->getSettings()->descriptionLength,
         ]);
     }
 

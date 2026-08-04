@@ -47,7 +47,7 @@ class RenderService extends Component
      */
     public function head(?MetaResolution $resolution = null): Markup
     {
-        $resolution ??= Plugin::getInstance()?->getResolve()->current();
+        $resolution ??= Plugin::getInstance()->getResolve()->current();
 
         if ($resolution === null) {
             return new Markup('', 'UTF-8');
@@ -64,7 +64,7 @@ class RenderService extends Component
 
         // From here on an override can no longer reach the page directly, so
         // anything arriving later has to be patched in at the end instead.
-        Plugin::getInstance()?->getResolve()->markRendered();
+        Plugin::getInstance()->getResolve()->markRendered();
 
         return new Markup(self::MARKER_START . "\n" . $html . "\n" . self::MARKER_END, 'UTF-8');
     }
@@ -79,7 +79,7 @@ class RenderService extends Component
             return $output;
         }
 
-        $resolve = Plugin::getInstance()?->getResolve();
+        $resolve = Plugin::getInstance()->getResolve();
 
         if ($resolve === null || !$resolve->hasLateOverrides()) {
             return str_replace([self::MARKER_START . "\n", "\n" . self::MARKER_END, self::MARKER_START, self::MARKER_END], '', $output);
@@ -97,7 +97,7 @@ class RenderService extends Component
 
     public function titleTag(?MetaResolution $resolution = null): Markup
     {
-        $resolution ??= Plugin::getInstance()?->getResolve()->current();
+        $resolution ??= Plugin::getInstance()->getResolve()->current();
         $title = $resolution?->getString('renderedTitle') ?? '';
 
         return new Markup('<title>' . Html::encode($title) . '</title>', 'UTF-8');
@@ -108,7 +108,7 @@ class RenderService extends Component
      */
     public function metaTags(?MetaResolution $resolution = null): Markup
     {
-        $resolution ??= Plugin::getInstance()?->getResolve()->current();
+        $resolution ??= Plugin::getInstance()->getResolve()->current();
 
         if ($resolution === null) {
             return new Markup('', 'UTF-8');
@@ -206,8 +206,8 @@ class RenderService extends Component
      */
     public function jsonLd(?MetaResolution $resolution = null): Markup
     {
-        $resolution ??= Plugin::getInstance()?->getResolve()->current();
-        $graph = Plugin::getInstance()?->getSchema()->graph($resolution);
+        $resolution ??= Plugin::getInstance()->getResolve()->current();
+        $graph = Plugin::getInstance()->getSchema()->graph($resolution);
 
         if ($graph === null || $graph === []) {
             return new Markup('', 'UTF-8');
@@ -243,7 +243,7 @@ class RenderService extends Component
             return '';
         }
 
-        if (!(Plugin::getInstance()?->getSettings()->originComments ?? true)) {
+        if (!(Plugin::getInstance()->getSettings()->originComments)) {
             return '';
         }
 

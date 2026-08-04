@@ -1,0 +1,36 @@
+parameters:
+    level: 6
+    paths:
+        - src
+        - tests
+    treatPhpDocTypesAsCertain: false
+    # Neither Yii.php nor Craft.php is autoloaded by Composer: Craft requires
+    # them from its own bootstrap. Without this, every `Craft::$app` reads as an
+    # unknown class and the whole analysis is silently meaningless.
+    scanFiles:
+        - vendor/yiisoft/yii2/Yii.php
+        - vendor/craftcms/cms/src/Craft.php
+    ignoreErrors:
+        # `Craft::$app` inherits its docblock from `yii\BaseYii`, where it is
+        # typed as a plain Yii application, so every Craft-specific component
+        # reads as undefined. Craft ships an extension that fixes this at the
+        # source (craftcms/phpstan), but it has no stable release, and a stub
+        # cannot retype a class Composer does not autoload. These patterns only
+        # ever arise from that one inherited docblock.
+        -
+            identifier: method.notFound
+            message: '#^Call to an undefined method yii\\[\w\\<>|]*(Application|Request|View|Session|Connection|UrlManager)[\w\\<>|]*::#'
+        -
+            identifier: property.notFound
+            message: '#^Access to an undefined property yii\\[\w\\<>|]*Application[\w\\<>|]*::\$env#'
+
+        # BridgeKit is an optional companion, not a dependency: SeoKit only
+        # leaves redirected URLs out of the sitemap when it happens to be
+        # installed. Every call sits behind a class_exists() guard, so the
+        # class being absent is the normal case rather than a problem, and
+        # requiring a private repository just to satisfy the analyser would be
+        # a strange price for a public plugin to pay.
+        -
+            identifier: class.notFound
+            message: '#unknown class viesrood\\bridgekit\\helpers\\UrlMatcher#'
+            path: src/helpers/Redirects.php

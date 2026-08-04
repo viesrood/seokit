@@ -258,7 +258,7 @@ class Plugin extends BasePlugin
             View::class,
             View::EVENT_AFTER_RENDER_PAGE_TEMPLATE,
             function (TemplateEvent $event): void {
-                if ($event->templateMode !== View::TEMPLATE_MODE_SITE || !is_string($event->output)) {
+                if ($event->templateMode !== View::TEMPLATE_MODE_SITE) {
                     return;
                 }
 

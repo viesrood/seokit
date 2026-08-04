@@ -203,9 +203,9 @@ class ResolveService extends Component
      */
     private function applyBase(MetaResolution $resolution, ?ElementInterface $element): void
     {
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
         $site = Craft::$app->getSites()->getCurrentSite();
-        $siteName = $settings?->resolvedSiteName() ?? (string)$site->getName();
+        $siteName = $settings->resolvedSiteName() ?? (string)$site->getName();
 
         $resolution
             ->set('siteName', $siteName, MetaResolution::SOURCE_SETTINGS, 'site name')
@@ -214,8 +214,8 @@ class ResolveService extends Component
             ->set('twitterCard', 'summary_large_image', MetaResolution::SOURCE_DERIVED, 'default')
             ->setStrict('indexable', true, MetaResolution::SOURCE_DERIVED, 'default');
 
-        if (($settings?->twitterSite ?? '') !== '') {
-            $handle = ltrim((string)$settings?->twitterSite, '@');
+        if ($settings->twitterSite !== '') {
+            $handle = ltrim((string)$settings->twitterSite, '@');
             $resolution->set('twitterSite', '@' . $handle, MetaResolution::SOURCE_SETTINGS, 'settings');
         }
 
@@ -252,16 +252,16 @@ class ResolveService extends Component
             }
         }
 
-        if (($settings?->defaultDescription ?? '') !== '') {
+        if ($settings->defaultDescription !== '') {
             $resolution->set(
                 'description',
-                (string)$settings?->defaultDescription,
+                (string)$settings->defaultDescription,
                 MetaResolution::SOURCE_SETTINGS,
                 'default description',
             );
         }
 
-        $defaultImage = $this->defaultSocialImage($settings?->defaultSocialImageId);
+        $defaultImage = $this->defaultSocialImage($settings->defaultSocialImageId);
         if ($defaultImage !== null) {
             $resolution->set('image', $defaultImage, MetaResolution::SOURCE_SETTINGS, 'default sharing image');
         }
@@ -301,10 +301,10 @@ class ResolveService extends Component
             $resolution->setStrict('indexable', false, MetaResolution::SOURCE_DERIVED, 'element status is not live');
         }
 
-        $settings = Plugin::getInstance()?->getSettings();
-        $needed = ($settings?->descriptionLength ?? 155) + 40;
+        $settings = Plugin::getInstance()->getSettings();
+        $needed = $settings->descriptionLength + 40;
 
-        $this->applyContent($resolution, $element, $needed, $settings?->descriptionLength ?? 155);
+        $this->applyContent($resolution, $element, $needed, $settings->descriptionLength);
 
         if ($element instanceof Entry) {
             if ($element->postDate !== null) {
@@ -428,7 +428,7 @@ class ResolveService extends Component
             return $empty;
         }
 
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
 
         if ($settings === null) {
             return $empty;
@@ -474,7 +474,7 @@ class ResolveService extends Component
      */
     public function profileFor(ElementInterface $element): array
     {
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
 
         if ($element instanceof Entry && $settings !== null) {
             $type = $element->getType();
@@ -529,12 +529,12 @@ class ResolveService extends Component
             return $this->profileIdCache[$profile];
         }
 
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
         $ids = [];
 
         foreach (Craft::$app->getEntries()->getAllSections() as $section) {
             foreach ($section->getEntryTypes() as $entryType) {
-                $configured = $settings?->entryTypeConfig($entryType->uid)['profile'] ?? 'auto';
+                $configured = $settings->entryTypeConfig($entryType->uid)['profile'] ?? 'auto';
 
                 $resolved = ($configured !== '' && $configured !== 'auto')
                     ? $configured
@@ -642,7 +642,7 @@ class ResolveService extends Component
      */
     private function finalize(MetaResolution $resolution): void
     {
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
         $siteName = $resolution->getString('siteName');
         $title = $resolution->getString('title');
 
@@ -652,7 +652,7 @@ class ResolveService extends Component
         // An override only escapes the pattern when the site says overrides
         // are the whole title. Otherwise it is treated like any other title,
         // which is what a writer coming from SEOmatic or Yoast expects.
-        $literalOverrides = !($settings?->applyTitlePatternToOverrides ?? true);
+        $literalOverrides = !$settings->applyTitlePatternToOverrides;
         $titleSource = $resolution->origin('title')['source'] ?? '';
         $isOverride = $resolution->getBool('titleIsExact')
             || $titleSource === MetaResolution::SOURCE_TEMPLATE;
@@ -660,13 +660,13 @@ class ResolveService extends Component
         $needsTemplate = !($literalOverrides && $isOverride);
 
         if ($needsTemplate && $title !== '' && $siteName !== '') {
-            if ($resolution->getBool('isHome') && ($settings?->homeTitleIsSiteName ?? true)) {
+            if ($resolution->getBool('isHome') && $settings->homeTitleIsSiteName) {
                 $title = $siteName;
             } elseif ($title !== $siteName) {
-                $title = strtr((string)($settings?->titleTemplate ?? '{title} {separator} {siteName}'), [
+                $title = strtr((string)$settings->titleTemplate, [
                     '{title}' => $title,
                     '{siteName}' => $siteName,
-                    '{separator}' => (string)($settings?->titleSeparator ?? '-'),
+                    '{separator}' => (string)$settings->titleSeparator,
                 ]);
             }
         }
@@ -718,7 +718,7 @@ class ResolveService extends Component
         // it did nothing.
         if (($resolution->origin('robots')['source'] ?? '') !== MetaResolution::SOURCE_TEMPLATE) {
             $directives = $resolution->getBool('indexable', true)
-                ? ['index', 'follow', ...($settings?->robotsDirectives ?? [])]
+                ? ['index', 'follow', ...$settings->robotsDirectives]
                 : ['noindex', 'nofollow'];
 
             $resolution->set('robots', implode(', ', $directives), MetaResolution::SOURCE_DERIVED, 'indexable state plus settings');

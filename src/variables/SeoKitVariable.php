@@ -28,22 +28,22 @@ class SeoKitVariable
      */
     public function head(): Markup
     {
-        return Plugin::getInstance()?->getRender()->head() ?? new Markup('', 'UTF-8');
+        return Plugin::getInstance()->getRender()->head() ?? new Markup('', 'UTF-8');
     }
 
     public function title(): Markup
     {
-        return Plugin::getInstance()?->getRender()->titleTag() ?? new Markup('', 'UTF-8');
+        return Plugin::getInstance()->getRender()->titleTag() ?? new Markup('', 'UTF-8');
     }
 
     public function meta(): Markup
     {
-        return Plugin::getInstance()?->getRender()->metaTags() ?? new Markup('', 'UTF-8');
+        return Plugin::getInstance()->getRender()->metaTags() ?? new Markup('', 'UTF-8');
     }
 
     public function jsonLd(): Markup
     {
-        return Plugin::getInstance()?->getRender()->jsonLd() ?? new Markup('', 'UTF-8');
+        return Plugin::getInstance()->getRender()->jsonLd() ?? new Markup('', 'UTF-8');
     }
 
     /**
@@ -62,7 +62,7 @@ class SeoKitVariable
      */
     public function set(array $values): void
     {
-        Plugin::getInstance()?->getResolve()->override($values);
+        Plugin::getInstance()->getResolve()->override($values);
     }
 
     /**
@@ -85,7 +85,7 @@ class SeoKitVariable
      */
     public function video(array $video): void
     {
-        Plugin::getInstance()?->getResolve()->addVideo($video);
+        Plugin::getInstance()->getResolve()->addVideo($video);
     }
 
     /**
@@ -102,7 +102,7 @@ class SeoKitVariable
      */
     public function resolution(): ?MetaResolution
     {
-        return Plugin::getInstance()?->getResolve()->current();
+        return Plugin::getInstance()->getResolve()->current();
     }
 
     /**
@@ -111,7 +111,7 @@ class SeoKitVariable
      */
     public function forElement(ElementInterface $element): ?MetaResolution
     {
-        return Plugin::getInstance()?->getResolve()->forElement($element, false);
+        return Plugin::getInstance()->getResolve()->forElement($element, false);
     }
 
     public function sitemapUrl(): string

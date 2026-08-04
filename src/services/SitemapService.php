@@ -214,7 +214,7 @@ class SitemapService extends Component
      */
     private function hasIncludedEntryType(Section $section): bool
     {
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
 
         foreach ($section->getEntryTypes() as $entryType) {
             if ($settings === null || $settings->entryTypeConfig($entryType->uid)['sitemap']) {
@@ -233,15 +233,15 @@ class SitemapService extends Component
      */
     private function isIndexable(Entry $entry): bool
     {
-        $settings = Plugin::getInstance()?->getSettings();
+        $settings = Plugin::getInstance()->getSettings();
 
         if ($settings !== null && !$settings->entryTypeConfig($entry->getType()->uid)['sitemap']) {
             return false;
         }
 
-        $data = Plugin::getInstance()?->getResolve()->fieldValue($entry);
+        $data = Plugin::getInstance()->getResolve()->fieldValue($entry);
 
-        return !($data?->noindex ?? false);
+        return !($data?->noindex === true);
     }
 
     private function entryUrl(Entry $entry): ?string
