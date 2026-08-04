@@ -37,10 +37,22 @@ class RenderService extends Component
      * turn up, swap the block for a freshly rendered one at the end of the
      * page. Position stays the template's decision, timing stops being a trap,
      * and when nothing arrives late the markers are simply removed.
+     *
+     * The markers are meta tags rather than the HTML comments this started
+     * with, and that is not cosmetic. An HTML minifier strips comments, so on
+     * any site that minifies its output the boundaries vanished before this
+     * code could find them and every late override was silently dropped. Meta
+     * tags survive minification; the matching below tolerates a minifier
+     * reordering or unquoting their attributes.
      */
-    public const MARKER_START = '<!--seokit:head-->';
+    public const MARKER_START = '<meta name="seokit-head" content="start">';
 
-    public const MARKER_END = '<!--/seokit:head-->';
+    public const MARKER_END = '<meta name="seokit-head" content="end">';
+
+    /**
+     * Loose enough to still recognise a marker a minifier has rewritten.
+     */
+    private const MARKER_PATTERN = '/<meta[^>]*seokit-head[^>]*>/i';
 
     /**
      * The complete head block: meta, link and JSON-LD.
@@ -75,24 +87,35 @@ class RenderService extends Component
      */
     public function substitute(string $output): string
     {
-        if (!str_contains($output, self::MARKER_START)) {
-            return $output;
+        if (preg_match_all(self::MARKER_PATTERN, $output, $treffers, PREG_OFFSET_CAPTURE) < 2) {
+            // No pair to work with. Strip a lone marker rather than ship it.
+            return (string)preg_replace(self::MARKER_PATTERN, '', $output);
         }
+
+        $start = $treffers[0][0];
+        $eind = $treffers[0][1];
+        $van = (int)$start[1];
+        $tot = (int)$eind[1] + strlen((string)$eind[0]);
 
         $resolve = Plugin::getInstance()->getResolve();
 
-        if ($resolve === null || !$resolve->hasLateOverrides()) {
-            return str_replace([self::MARKER_START . "\n", "\n" . self::MARKER_END, self::MARKER_START, self::MARKER_END], '', $output);
+        if (!$resolve->hasLateOverrides()) {
+            // Nothing arrived after the head was written, so the block that is
+            // already there is correct: only the markers have to go.
+            return (string)preg_replace(self::MARKER_PATTERN, '', $output);
         }
 
-        $fresh = (string)$this->head($resolve->current());
-        $fresh = str_replace([self::MARKER_START . "\n", "\n" . self::MARKER_END, self::MARKER_START, self::MARKER_END], '', $fresh);
+        $vers = $this->stripMarkers((string)$this->head($resolve->current()));
 
-        $pattern = '/' . preg_quote(self::MARKER_START, '/') . '.*?' . preg_quote(self::MARKER_END, '/') . '/s';
+        // substr rather than preg_replace: a meta description is exactly the
+        // kind of text that contains a $ or a backslash, and preg_replace
+        // would read those as backreferences.
+        return substr($output, 0, $van) . $vers . substr($output, $tot);
+    }
 
-        // preg_replace treats $ and \\ in the replacement as references, and a
-        // meta description is exactly the kind of text that contains them.
-        return (string)preg_replace_callback($pattern, static fn(): string => $fresh, $output, 1);
+    private function stripMarkers(string $html): string
+    {
+        return trim((string)preg_replace(self::MARKER_PATTERN, '', $html));
     }
 
     public function titleTag(?MetaResolution $resolution = null): Markup
