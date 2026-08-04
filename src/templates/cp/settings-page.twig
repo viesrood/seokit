@@ -5,8 +5,9 @@
 {% set fullPageForm = true %}
 
 {% block content %}
-	<input type="hidden" name="action" value="plugins/save-plugin-settings">
-	<input type="hidden" name="pluginHandle" value="seokit">
+	{# Bewust niet plugins/save-plugin-settings: die bewaart alleen de geposte
+	   sleutels en vervangt daarmee de rest van de instellingen. #}
+	<input type="hidden" name="action" value="seokit/settings/save">
 	{{ redirectInput('seokit/settings') }}
 
 	{# The partial is written for the plugin settings screen, where Craft

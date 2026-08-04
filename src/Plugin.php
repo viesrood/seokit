@@ -239,6 +239,7 @@ class Plugin extends BasePlugin
                 $event->rules['seokit'] = 'seokit/overview/index';
                 $event->rules['seokit/settings'] = 'seokit/settings/index';
                 $event->rules['seokit/robots'] = 'seokit/settings/robots';
+                $event->rules['seokit/save'] = 'seokit/settings/save';
             }
         );
     }
