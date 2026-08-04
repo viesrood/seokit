@@ -232,7 +232,14 @@ class SchemaService extends Component
 
             $naam = trim((string)($video['name'] ?? ''));
             $thumbnail = Url::absolute(trim((string)($video['thumbnailUrl'] ?? '')));
-            $datum = $this->isoDate($video['uploadDate'] ?? null);
+
+            // Vimeo's oEmbed response has no upload date at all, so requiring
+            // one would mean never emitting a video node on a Vimeo site. The
+            // page's own publication date is the honest second answer: it is
+            // when this video was first published *here*, which is what the
+            // property is asked to describe.
+            $datum = $this->isoDate($video['uploadDate'] ?? null)
+                ?? $this->isoDate($resolution->getString('publishedTime'));
 
             // The description may fall back to the page's own: a video block
             // without a caption still sits on a page that describes it.
