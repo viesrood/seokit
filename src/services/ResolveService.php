@@ -61,6 +61,9 @@ class ResolveService extends Component
     /** @var array<string, mixed> */
     private array $templateOverrides = [];
 
+    /** @var array<int, array<string, mixed>> */
+    private array $videos = [];
+
     /** @var array<string, ElementInterface|false> */
     private array $uriCache = [];
 
@@ -111,6 +114,35 @@ class ResolveService extends Component
     }
 
     /**
+     * Register a video that appears on this page.
+     *
+     * Called from the template that renders the embed, because that template
+     * already holds the oEmbed response: title, thumbnail, publication date.
+     * Fetching it again here would mean a second HTTP request to the video
+     * host for data we were just handed.
+     *
+     * Video blocks render inside the body, so this always arrives after the
+     * head has been written. That is exactly what the late-substitution in
+     * RenderService is for.
+     *
+     * @param array<string, mixed> $video
+     */
+    public function addVideo(array $video): void
+    {
+        if ($video === []) {
+            return;
+        }
+
+        $this->videos[] = $video;
+
+        if ($this->rendered) {
+            $this->lateOverrides = true;
+        }
+
+        $this->current = null;
+    }
+
+    /**
      * The resolution for the page being rendered.
      */
     public function current(): MetaResolution
@@ -146,6 +178,10 @@ class ResolveService extends Component
             if ($includeField) {
                 $this->applyField($resolution, $element);
             }
+        }
+
+        if ($applyTemplateOverrides && $this->videos !== []) {
+            $resolution->set('videos', $this->videos, MetaResolution::SOURCE_TEMPLATE, 'craft.seokit.video()');
         }
 
         if ($applyTemplateOverrides && $this->templateOverrides !== []) {

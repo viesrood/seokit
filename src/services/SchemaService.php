@@ -8,6 +8,8 @@ use Craft;
 use craft\base\Component;
 use craft\elements\Asset;
 use craft\helpers\UrlHelper;
+use DateTimeImmutable;
+use DateTimeInterface;
 use Throwable;
 use viesrood\seokit\helpers\Text;
 use viesrood\seokit\helpers\Url;
@@ -60,6 +62,10 @@ class SchemaService extends Component
         $profile = $this->profileNode($resolution);
         if ($profile !== null) {
             $nodes[] = $profile;
+        }
+
+        foreach ($this->videoNodes($resolution) as $video) {
+            $nodes[] = $video;
         }
 
         return [
@@ -193,6 +199,129 @@ class SchemaService extends Component
         }
 
         return $node;
+    }
+
+    /**
+     * VideoObject nodes for the videos a template registered.
+     *
+     * Google wants name, description, thumbnailUrl and uploadDate before it
+     * will do anything with a video, and reports the ones missing a field as
+     * errors in Search Console. A node that cannot meet that bar is left out
+     * rather than published half-finished: an error costs attention, a missing
+     * node costs nothing that was ever going to work.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function videoNodes(MetaResolution $resolution): array
+    {
+        $videos = $resolution->getArray('videos');
+
+        if ($videos === []) {
+            return [];
+        }
+
+        $paginaId = $this->pageId($resolution);
+        $canonical = $resolution->getString('canonical');
+        $nodes = [];
+        $index = 0;
+
+        foreach ($videos as $video) {
+            if (!is_array($video)) {
+                continue;
+            }
+
+            $naam = trim((string)($video['name'] ?? ''));
+            $thumbnail = Url::absolute(trim((string)($video['thumbnailUrl'] ?? '')));
+            $datum = $this->isoDate($video['uploadDate'] ?? null);
+
+            // The description may fall back to the page's own: a video block
+            // without a caption still sits on a page that describes it.
+            $omschrijving = Text::plain((string)($video['description'] ?? ''));
+            if ($omschrijving === '') {
+                $omschrijving = $resolution->getString('description');
+            }
+
+            if ($naam === '' || $thumbnail === '' || $datum === null || $omschrijving === '') {
+                continue;
+            }
+
+            $node = [
+                '@type' => 'VideoObject',
+                '@id' => $canonical . '#video-' . (++$index),
+                'name' => $naam,
+                'description' => Text::truncate($omschrijving, 300),
+                'thumbnailUrl' => $thumbnail,
+                'uploadDate' => $datum,
+                // Attached to the page rather than floating in the graph, so a
+                // parser knows which page the video belongs to.
+                'mainEntityOfPage' => ['@id' => $paginaId],
+            ];
+
+            $embed = trim((string)($video['embedUrl'] ?? ''));
+
+            // Falling back to the src of the provider's own iframe. That is
+            // the embed URL by definition, whoever the provider is, so this
+            // needs no per-host knowledge of Vimeo or YouTube.
+            if ($embed === '') {
+                $embed = self::embedUrlFromCode((string)($video['embedCode'] ?? ''));
+            }
+
+            if ($embed !== '') {
+                $node['embedUrl'] = $embed;
+            }
+
+            $paginaUrl = trim((string)($video['url'] ?? ''));
+            if ($paginaUrl !== '') {
+                $node['url'] = $paginaUrl;
+            }
+
+            $bestand = trim((string)($video['contentUrl'] ?? ''));
+            if ($bestand !== '') {
+                $node['contentUrl'] = $bestand;
+            }
+
+            $duur = trim((string)($video['duration'] ?? ''));
+            if ($duur !== '') {
+                $node['duration'] = $duur;
+            }
+
+            $nodes[] = $node;
+        }
+
+        return $nodes;
+    }
+
+    /**
+     * The src of the first iframe in an embed code.
+     */
+    private static function embedUrlFromCode(string $code): string
+    {
+        if ($code === '' || preg_match('/<iframe[^>]+src="([^"]+)"/i', $code, $treffer) !== 1) {
+            return '';
+        }
+
+        return html_entity_decode($treffer[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    /**
+     * An ISO 8601 date from whatever the template handed over: oEmbed gives a
+     * DateTime, a hand-written template gives a string.
+     */
+    private function isoDate(mixed $value): ?string
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->format(DATE_ATOM);
+        }
+
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return (new DateTimeImmutable(trim($value)))->format(DATE_ATOM);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**

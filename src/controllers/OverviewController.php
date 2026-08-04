@@ -19,6 +19,7 @@ use craft\models\EntryType;
 use craft\models\Section;
 use craft\web\Controller;
 use viesrood\seokit\fields\SeoField;
+use viesrood\seokit\helpers\Redirects;
 use viesrood\seokit\Plugin;
 use viesrood\seokit\services\ResolveService;
 use yii\web\Response;
@@ -114,6 +115,20 @@ class OverviewController extends Controller
                 'detail' => Craft::t('seokit', 'That file wins over the text in these settings, so editing it here changes nothing: {path}', ['path' => $physical]),
             ];
         }
+
+        // Redirects are BridgeKit's job, and SeoKit is not going to grow its
+        // own. Saying so out loud beats leaving a hole where people expect one.
+        $checks[] = Redirects::available()
+            ? [
+                'status' => 'ok',
+                'label' => Craft::t('seokit', 'Redirects are handled by BridgeKit'),
+                'detail' => Craft::t('seokit', 'URLs that redirect are left out of the sitemap, so Search Console does not report them back as errors.'),
+            ]
+            : [
+                'status' => 'info',
+                'label' => Craft::t('seokit', 'No redirect handling installed'),
+                'detail' => Craft::t('seokit', 'SeoKit does not do redirects. A changed URL simply 404s until something catches it.'),
+            ];
 
         // Two plugins writing meta tags is not a conflict Craft can detect,
         // and the symptom (two titles, two canonicals) is invisible until

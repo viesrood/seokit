@@ -66,6 +66,29 @@ class SeoKitVariable
     }
 
     /**
+     * Register a video on this page so it ends up in the JSON-LD graph.
+     *
+     *     {% do craft.seokit.video({
+     *         name: media.title,
+     *         description: block.desc,
+     *         thumbnailUrl: media.image,
+     *         uploadDate: media.publishedTime,
+     *         embedUrl: block.video.url,
+     *     }) %}
+     *
+     * Call it from the template that renders the embed: it already has the
+     * oEmbed response, and asking the video host for it a second time is a
+     * request nobody needs. Missing a thumbnail or an upload date means the
+     * video is left out rather than published incomplete.
+     *
+     * @param array<string, mixed> $video
+     */
+    public function video(array $video): void
+    {
+        Plugin::getInstance()?->getResolve()->addVideo($video);
+    }
+
+    /**
      * Shorthand for the single most common override.
      */
     public function noindex(): void

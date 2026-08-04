@@ -15,6 +15,7 @@ use craft\helpers\UrlHelper;
 use craft\models\Section;
 use DateTimeInterface;
 use Throwable;
+use viesrood\seokit\helpers\Redirects;
 use viesrood\seokit\helpers\Url;
 use viesrood\seokit\Plugin;
 use yii\caching\TagDependency;
@@ -123,11 +124,22 @@ class SitemapService extends Component
         }
 
         $lines = [];
+        $omgeleid = 0;
 
         foreach ($query->all() as $entry) {
             $url = $this->entryUrl($entry);
 
             if ($url === null || !$this->isIndexable($entry)) {
+                continue;
+            }
+
+            // A URL that redirects has no business in a sitemap: Search Console
+            // reports every one of them back as an error. BridgeKit knows which
+            // paths those are; see the Redirects helper for why this seam
+            // exists at all.
+            if (Redirects::matches($url)) {
+                $omgeleid++;
+
                 continue;
             }
 
@@ -143,6 +155,14 @@ class SitemapService extends Component
             }
 
             $lines[] = '  </url>';
+        }
+
+        if ($omgeleid > 0) {
+            Craft::info(sprintf(
+                'SeoKit left %d redirected URL(s) out of the %s sitemap.',
+                $omgeleid,
+                $section->handle,
+            ), __METHOD__);
         }
 
         return implode("\n", [
