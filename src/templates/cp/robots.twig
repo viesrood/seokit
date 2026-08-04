@@ -1,0 +1,95 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% set title = 'Robots and sitemap'|t('seokit') %}
+{% set selectedSubnavItem = 'robots' %}
+{% set fullPageForm = true %}
+
+{% block content %}
+	<input type="hidden" name="action" value="plugins/save-plugin-settings">
+	<input type="hidden" name="pluginHandle" value="seokit">
+	{{ redirectInput('seokit/robots') }}
+
+	{% namespace 'settings' %}
+
+		<h2>{{ 'Sitemap'|t('seokit') }}</h2>
+
+		{{ forms.lightswitchField({
+			label: 'Serve a sitemap'|t('seokit'),
+			id: 'sitemapEnabled',
+			name: 'sitemapEnabled',
+			on: settings.sitemapEnabled,
+		}) }}
+
+		{% if settings.sitemapEnabled %}
+			<p class="light">{{ 'Index:'|t('seokit') }} <a href="{{ sitemapUrl }}" target="_blank" rel="noopener">{{ sitemapUrl }}</a></p>
+
+			{% if sections|length %}
+				<ul class="bullets">
+					{% for section in sections %}
+						<li>
+							<a href="{{ siteUrl('sitemap-' ~ section.handle ~ '.xml') }}" target="_blank" rel="noopener">
+								sitemap-{{ section.handle }}.xml
+							</a>
+							<span class="light">{{ section.name }}</span>
+						</li>
+					{% endfor %}
+				</ul>
+			{% else %}
+				<p class="light">{{ 'No sections with public URLs, so the sitemap would be empty.'|t('seokit') }}</p>
+			{% endif %}
+
+			<p class="light">
+				{{ 'No priority or change frequency: Google has ignored both for years, and a number that is ignored is a number nobody should have to maintain.'|t('seokit') }}
+			</p>
+		{% endif %}
+
+		<hr>
+
+		<h2>{{ 'robots.txt'|t('seokit') }}</h2>
+
+		{% if physicalFile %}
+			<div class="readable">
+				<blockquote class="note warning">
+					<p>
+						{{ 'There is a robots.txt file on disk at {path}. A file always wins over a route, so anything typed below is ignored until that file is removed.'|t('seokit', { path: physicalFile }) }}
+					</p>
+				</blockquote>
+			</div>
+		{% endif %}
+
+		{{ forms.lightswitchField({
+			label: 'Serve robots.txt from here'|t('seokit'),
+			id: 'robotsTxtEnabled',
+			name: 'robotsTxtEnabled',
+			on: settings.robotsTxtEnabled,
+		}) }}
+
+		{{ forms.textareaField({
+			label: 'Contents'|t('seokit'),
+			instructions: '{sitemap} expands to the sitemap index URL.'|t('seokit'),
+			id: 'robotsTxt',
+			name: 'robotsTxt',
+			value: settings.robotsTxt,
+			rows: 10,
+			class: 'code',
+		}) }}
+
+		<div class="readable">
+			<blockquote class="note">
+				<p>
+					<strong>{{ 'Disallow does not mean "keep out of Google".'|t('seokit') }}</strong>
+					{{ 'A disallowed URL is never fetched, so the noindex tag on that page is never read, and the bare URL can still be listed the moment something links to it. To keep a page out of results, let it be crawled and turn off "Show in search engines" on the page itself.'|t('seokit') }}
+				</p>
+			</blockquote>
+		</div>
+
+		{% if disallowRules|length %}
+			<p class="light">
+				{{ 'Currently disallowed:'|t('seokit') }}
+				{% for rule in disallowRules %}<code>{{ rule }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
+			</p>
+		{% endif %}
+
+	{% endnamespace %}
+{% endblock %}

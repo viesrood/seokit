@@ -1,0 +1,192 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% set title = 'SEO'|t('seokit') %}
+{% set selectedSubnavItem = 'overview' %}
+{% set fullPageForm = true %}
+
+{% block content %}
+	<input type="hidden" name="action" value="plugins/save-plugin-settings">
+	<input type="hidden" name="pluginHandle" value="seokit">
+	{{ redirectInput('seokit') }}
+
+	<h2>{{ 'Status'|t('seokit') }}</h2>
+
+	<div class="seokit-checks">
+		{% for check in checks %}
+			<div class="seokit-check seokit-check--{{ check.status }}">
+				<span class="seokit-check__dot" aria-hidden="true"></span>
+				<div>
+					<strong>{{ check.label }}</strong>
+					{% if check.detail %}<div class="light">{{ check.detail }}</div>{% endif %}
+				</div>
+			</div>
+		{% endfor %}
+	</div>
+
+	<div class="readable">
+		<blockquote class="note tip">
+			<p>
+				{{ 'SeoKit renders where you put it. Add this to your layout once:'|t('seokit') }}
+				<br>
+				<code>&#123;&#123; craft.seokit.head() &#125;&#125;</code>
+			</p>
+		</blockquote>
+	</div>
+
+	<hr>
+
+	<h2>{{ 'Entry types'|t('seokit') }}</h2>
+
+	<p class="light">
+		{{ 'Left empty, SeoKit works this out per page: the entry title, the first usable text it finds, the first image worth sharing. Point it at a field where that guess is wrong. A chosen field that happens to be empty on a page falls back to the guess, so naming one is never a risk.'|t('seokit') }}
+	</p>
+
+	{% namespace 'settings' %}
+		<div class="seokit-types-scroll">
+		<table class="data fullwidth seokit-types">
+			<thead>
+				<tr>
+					<th>{{ 'Entry type'|t('seokit') }}</th>
+					<th>{{ 'Title from'|t('seokit') }}</th>
+					<th>{{ 'Description from'|t('seokit') }}</th>
+					<th>{{ 'Image from'|t('seokit') }}</th>
+					<th>{{ 'Schema profile'|t('seokit') }}</th>
+					<th class="thin">{{ 'In search engines'|t('seokit') }}</th>
+					<th class="thin">{{ 'In sitemap'|t('seokit') }}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for row in entryTypes %}
+					<tr>
+						<td>
+							<strong>{{ row.name }}</strong>
+							<div class="light">{{ row.sections|join(', ') }} &middot; <code>{{ row.handle }}</code></div>
+							{% if not row.hasUrls %}
+								<div class="light">{{ 'No public URLs'|t('seokit') }}</div>
+							{% endif %}
+						</td>
+						<td>
+							{{ forms.select({
+								id: 'titleField-' ~ row.uid,
+								name: 'entryTypes[' ~ row.uid ~ '][titleField]',
+								value: row.titleField,
+								options: row.fieldOptions.title,
+							}) }}
+						</td>
+						<td>
+							{{ forms.select({
+								id: 'descriptionField-' ~ row.uid,
+								name: 'entryTypes[' ~ row.uid ~ '][descriptionField]',
+								value: row.descriptionField,
+								options: row.fieldOptions.description,
+							}) }}
+						</td>
+						<td>
+							{{ forms.select({
+								id: 'imageField-' ~ row.uid,
+								name: 'entryTypes[' ~ row.uid ~ '][imageField]',
+								value: row.imageField,
+								options: row.fieldOptions.image,
+							}) }}
+						</td>
+						<td>
+							{{ forms.select({
+								id: 'profile-' ~ row.uid,
+								name: 'entryTypes[' ~ row.uid ~ '][profile]',
+								value: row.profile,
+								options: [{
+									label: 'Automatic ({guess})'|t('seokit', { guess: profiles[row.guessed] ?? row.guessed }),
+									value: 'auto',
+								}]|merge(profiles|keys|map(key => {
+									label: profiles[key],
+									value: key,
+								})),
+							}) }}
+						</td>
+						<td class="thin">
+							{% if row.hasUrls %}
+								{{ forms.lightswitch({
+									id: 'indexable-' ~ row.uid,
+									name: 'entryTypes[' ~ row.uid ~ '][indexable]',
+									on: row.indexable,
+								}) }}
+							{% else %}
+								<span class="light">-</span>
+							{% endif %}
+						</td>
+						<td class="thin">
+							{% if row.hasUrls and row.indexable %}
+								{{ forms.lightswitch({
+									id: 'sitemap-' ~ row.uid,
+									name: 'entryTypes[' ~ row.uid ~ '][sitemap]',
+									on: row.sitemap,
+								}) }}
+							{% else %}
+								<span class="light">-</span>
+							{% endif %}
+						</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		</div>
+	{% endnamespace %}
+{% endblock %}
+
+{% css %}
+	.seokit-checks {
+		display: grid;
+		gap: 8px;
+		margin-bottom: 24px;
+	}
+
+	.seokit-check {
+		display: flex;
+		gap: 10px;
+		align-items: flex-start;
+		padding: 10px 12px;
+		border: 1px solid var(--hairline-color);
+		border-radius: var(--large-border-radius, 8px);
+	}
+
+	.seokit-check__dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		margin-top: 5px;
+		flex: 0 0 auto;
+		background: var(--medium-text-color);
+	}
+
+	.seokit-check--ok .seokit-check__dot { background: var(--enabled-color, #27ab83); }
+	.seokit-check--warning .seokit-check__dot { background: var(--warning-color, #da5a47); }
+	.seokit-check--info .seokit-check__dot { background: var(--link-color); }
+
+	/* Six columns is a lot for one table, so the selects give up their width
+	   first and the entry type name keeps its own. */
+	.seokit-types select {
+		max-width: 200px;
+		width: 100%;
+	}
+
+	.seokit-types td {
+		vertical-align: middle;
+	}
+
+	.seokit-types td:first-child {
+		min-width: 160px;
+	}
+
+	.seokit-types th,
+	.seokit-types td {
+		padding-left: 8px;
+		padding-right: 8px;
+	}
+
+	/* Six columns do not fit every screen. The table scrolls on its own
+	   rather than pushing the page out of its card. */
+	.seokit-types-scroll {
+		overflow-x: auto;
+	}
+{% endcss %}

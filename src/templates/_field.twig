@@ -1,0 +1,116 @@
+{% import "_includes/forms" as forms %}
+
+{#
+   The seokit field.
+
+   The previews sit above the inputs on purpose: an editor should see what the
+   page already looks like in a result before being offered the chance to
+   change it. Nine times out of ten the answer is "that is fine", and the
+   fastest field is the one nobody edits.
+#}
+
+{% set derivedTitle = derived ? derived.getString('renderedTitle') : '' %}
+{% set derivedDescription = derived ? derived.getString('description') : '' %}
+{% set derivedUrl = derived ? derived.getString('canonical') : '' %}
+{% set derivedImage = derived ? derived.getString('imageUrl') : '' %}
+{% set imageAsset = value.getSocialImage() %}
+
+<div class="seokit-field"
+     id="{{ namespacedId }}"
+     data-seokit-field
+     data-derived-title="{{ derivedTitle }}"
+     data-derived-description="{{ derivedDescription }}"
+     data-description-length="{{ descriptionLength }}">
+
+	<div class="seokit-previews">
+		<div class="seokit-preview seokit-preview--serp">
+			<div class="seokit-preview__label">{{ 'Search result'|t('seokit') }}</div>
+			<div class="seokit-serp">
+				<div class="seokit-serp__url">{{ derivedUrl|replace({'https://': '', 'http://': ''})|replace({'/': ' › '}) }}</div>
+				<div class="seokit-serp__title" data-seokit-preview="title">{{ derivedTitle }}</div>
+				<div class="seokit-serp__description" data-seokit-preview="description">{{ derivedDescription }}</div>
+			</div>
+		</div>
+
+		<div class="seokit-preview seokit-preview--social">
+			<div class="seokit-preview__label">{{ 'Shared link'|t('seokit') }}</div>
+			<div class="seokit-social">
+				<div class="seokit-social__image" data-seokit-preview="image">
+					{% set previewImage = imageAsset ? imageAsset.getUrl({width: 600, height: 315, mode: 'crop'}) : derivedImage %}
+					{% if previewImage %}
+						<img src="{{ previewImage }}" alt="">
+					{% else %}
+						<span class="seokit-social__empty">{{ 'No sharing image'|t('seokit') }}</span>
+					{% endif %}
+				</div>
+				<div class="seokit-social__body">
+					<div class="seokit-social__domain">{{ derivedUrl|split('/')[2]|default('') }}</div>
+					<div class="seokit-social__title" data-seokit-preview="title">{{ derivedTitle }}</div>
+					<div class="seokit-social__description" data-seokit-preview="description">{{ derivedDescription }}</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	{{ forms.textField({
+		label: 'Title'|t('seokit'),
+		instructions: 'Leave empty to use the title above. What you type here is used exactly as typed, without the site name.'|t('seokit'),
+		id: id ~ '-title',
+		name: name ~ '[title]',
+		value: value.title,
+		placeholder: derivedTitle,
+		inputAttributes: {
+			'data-seokit-input': 'title',
+		},
+	}) }}
+
+	{{ forms.textareaField({
+		label: 'Description'|t('seokit'),
+		instructions: 'Leave empty to use the summary above, taken from this page\'s own content.'|t('seokit'),
+		id: id ~ '-description',
+		name: name ~ '[description]',
+		value: value.description,
+		placeholder: derivedDescription,
+		rows: 3,
+		inputAttributes: {
+			'data-seokit-input': 'description',
+		},
+	}) }}
+
+	<div class="seokit-counter" data-seokit-counter>
+		<span data-seokit-counter-value></span>
+	</div>
+
+	{{ forms.elementSelectField({
+		label: 'Sharing image'|t('seokit'),
+		instructions: 'Used when this page is shared. Cropped to 1200x630 around the focal point.'|t('seokit'),
+		id: id ~ '-socialImage',
+		name: name ~ '[socialImageId]',
+		elementType: 'craft\\elements\\Asset',
+		criteria: { kind: ['image'] },
+		limit: 1,
+		elements: imageAsset ? [imageAsset] : [],
+		selectionLabel: 'Choose an image'|t('seokit'),
+	}) }}
+
+	{{ forms.lightswitchField({
+		label: 'Show in search engines'|t('seokit'),
+		instructions: 'Off adds noindex to this page. It stays reachable, it just stops being listed.'|t('seokit'),
+		id: id ~ '-indexable',
+		name: name ~ '[indexable]',
+		on: not value.noindex,
+	}) }}
+
+	<details class="seokit-advanced">
+		<summary>{{ 'Advanced'|t('seokit') }}</summary>
+
+		{{ forms.textField({
+			label: 'Canonical URL'|t('seokit'),
+			instructions: 'Only for genuine duplicate content: point this page at the version that should be indexed. Empty means this page points at itself, which is almost always right.'|t('seokit'),
+			id: id ~ '-canonical',
+			name: name ~ '[canonical]',
+			value: value.canonical,
+			placeholder: derivedUrl,
+		}) }}
+	</details>
+</div>

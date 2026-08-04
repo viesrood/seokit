@@ -1,0 +1,228 @@
+{% import "_includes/forms" as forms %}
+
+{#
+   Site-wide settings. Shared between the plugin settings screen (where Craft
+   namespaces the inputs itself) and SeoKit's own screen (which wraps this in
+   a namespace tag), so every field name here is bare.
+
+   Everything on this page is optional. The order is deliberate: the things
+   that change what a page says come first, the entity details that feed the
+   JSON-LD graph come last, because those are filled in once and never looked
+   at again.
+#}
+
+<h2>{{ 'Titles and descriptions'|t('seokit') }}</h2>
+
+{{ forms.textField({
+	label: 'Site name'|t('seokit'),
+	instructions: 'Appended to page titles. Empty means the Craft site name, which is usually what you want.'|t('seokit'),
+	id: 'siteName',
+	name: 'siteName',
+	value: settings.siteName,
+	placeholder: craft.app.sites.currentSite.name,
+}) }}
+
+{{ forms.textField({
+	label: 'Title pattern'|t('seokit'),
+	instructions: 'Tokens: {title}, {siteName}, {separator}.'|t('seokit'),
+	id: 'titleTemplate',
+	name: 'titleTemplate',
+	value: settings.titleTemplate,
+	required: true,
+}) }}
+
+{{ forms.textField({
+	label: 'Separator'|t('seokit'),
+	id: 'titleSeparator',
+	name: 'titleSeparator',
+	value: settings.titleSeparator,
+	size: 4,
+}) }}
+
+{{ forms.lightswitchField({
+	label: 'Homepage title is just the site name'|t('seokit'),
+	instructions: '"Viesrood" rather than "Home - Viesrood".'|t('seokit'),
+	id: 'homeTitleIsSiteName',
+	name: 'homeTitleIsSiteName',
+	on: settings.homeTitleIsSiteName,
+}) }}
+
+{{ forms.textField({
+	label: 'Description length'|t('seokit'),
+	instructions: 'Only applies to descriptions SeoKit writes itself. What an editor types is never cut.'|t('seokit'),
+	id: 'descriptionLength',
+	name: 'descriptionLength',
+	value: settings.descriptionLength,
+	type: 'number',
+	size: 5,
+}) }}
+
+{{ forms.textareaField({
+	label: 'Fallback description'|t('seokit'),
+	instructions: 'Used only on pages with no usable text of their own.'|t('seokit'),
+	id: 'defaultDescription',
+	name: 'defaultDescription',
+	value: settings.defaultDescription,
+	rows: 2,
+}) }}
+
+{{ forms.elementSelectField({
+	label: 'Default sharing image'|t('seokit'),
+	instructions: 'Used when a page offers no image of its own.'|t('seokit'),
+	id: 'defaultSocialImageId',
+	name: 'defaultSocialImageId',
+	elementType: 'craft\\elements\\Asset',
+	criteria: { kind: ['image'] },
+	limit: 1,
+	elements: settings.defaultSocialImageId ? [craft.assets.id(settings.defaultSocialImageId).one()]|filter(v => v) : [],
+	selectionLabel: 'Choose an image'|t('seokit'),
+}) }}
+
+<hr>
+
+<h2>{{ 'Indexing'|t('seokit') }}</h2>
+
+{{ forms.checkboxSelectField({
+	label: 'Robots directives'|t('seokit'),
+	instructions: 'Added to every indexable page. These three decide how rich a result is allowed to be; without them search engines pick conservative limits for you.'|t('seokit'),
+	id: 'robotsDirectives',
+	name: 'robotsDirectives',
+	options: [
+		{ label: 'Large image previews (max-image-preview:large)'|t('seokit'), value: 'max-image-preview:large' },
+		{ label: 'Unlimited snippet length (max-snippet:-1)'|t('seokit'), value: 'max-snippet:-1' },
+		{ label: 'Unlimited video previews (max-video-preview:-1)'|t('seokit'), value: 'max-video-preview:-1' },
+	],
+	values: settings.robotsDirectives,
+}) }}
+
+<hr>
+
+<h2>{{ 'Who this site belongs to'|t('seokit') }}</h2>
+
+<p class="light">{{ 'This section builds the Organization node every other bit of structured data points at. It is also the cheapest way to tell an AI answer engine that the company on this page is the one it already knows about.'|t('seokit') }}</p>
+
+{{ forms.selectField({
+	label: 'Type'|t('seokit'),
+	id: 'organizationType',
+	name: 'organizationType',
+	value: settings.organizationType,
+	options: [
+		{ label: 'Organization'|t('seokit'), value: 'Organization' },
+		{ label: 'Local business'|t('seokit'), value: 'LocalBusiness' },
+		{ label: 'Professional service'|t('seokit'), value: 'ProfessionalService' },
+		{ label: 'Person'|t('seokit'), value: 'Person' },
+	],
+}) }}
+
+{{ forms.textField({
+	label: 'Name'|t('seokit'),
+	id: 'organizationName',
+	name: 'organizationName',
+	value: settings.organizationName,
+	placeholder: settings.resolvedSiteName(),
+}) }}
+
+{{ forms.textField({
+	label: 'Legal name'|t('seokit'),
+	instructions: 'Only when it differs from the trading name.'|t('seokit'),
+	id: 'organizationLegalName',
+	name: 'organizationLegalName',
+	value: settings.organizationLegalName,
+}) }}
+
+{{ forms.elementSelectField({
+	label: 'Logo'|t('seokit'),
+	id: 'organizationLogoId',
+	name: 'organizationLogoId',
+	elementType: 'craft\\elements\\Asset',
+	criteria: { kind: ['image'] },
+	limit: 1,
+	elements: settings.organizationLogoId ? [craft.assets.id(settings.organizationLogoId).one()]|filter(v => v) : [],
+	selectionLabel: 'Choose an image'|t('seokit'),
+}) }}
+
+{{ forms.textareaField({
+	label: 'Profiles elsewhere'|t('seokit'),
+	instructions: 'One URL per line: LinkedIn, Instagram, Wikipedia, a Chamber of Commerce listing. This is the sameAs list, and it is the single most skipped entity signal there is.'|t('seokit'),
+	id: 'sameAs',
+	name: 'sameAs',
+	value: settings.sameAs|join("\n"),
+	rows: 4,
+	placeholder: 'https://www.linkedin.com/company/...',
+}) }}
+
+{{ forms.textField({
+	label: 'Email'|t('seokit'),
+	id: 'email',
+	name: 'email',
+	value: settings.email,
+	type: 'email',
+}) }}
+
+{{ forms.textField({
+	label: 'Telephone'|t('seokit'),
+	id: 'telephone',
+	name: 'telephone',
+	value: settings.telephone,
+}) }}
+
+{{ forms.textField({
+	label: 'X handle'|t('seokit'),
+	id: 'twitterSite',
+	name: 'twitterSite',
+	value: settings.twitterSite,
+	placeholder: '@viesrood',
+}) }}
+
+<hr>
+
+<h2>{{ 'Address'|t('seokit') }}</h2>
+
+<p class="light">{{ 'Only used when it is complete. A partial address in structured data is worse than none.'|t('seokit') }}</p>
+
+{{ forms.textField({
+	label: 'Street and number'|t('seokit'),
+	id: 'streetAddress',
+	name: 'streetAddress',
+	value: settings.streetAddress,
+}) }}
+
+{{ forms.textField({
+	label: 'Postal code'|t('seokit'),
+	id: 'postalCode',
+	name: 'postalCode',
+	value: settings.postalCode,
+	size: 10,
+}) }}
+
+{{ forms.textField({
+	label: 'City'|t('seokit'),
+	id: 'addressLocality',
+	name: 'addressLocality',
+	value: settings.addressLocality,
+}) }}
+
+{{ forms.textField({
+	label: 'Region'|t('seokit'),
+	id: 'addressRegion',
+	name: 'addressRegion',
+	value: settings.addressRegion,
+}) }}
+
+{{ forms.textField({
+	label: 'Country code'|t('seokit'),
+	id: 'addressCountry',
+	name: 'addressCountry',
+	value: settings.addressCountry,
+	size: 4,
+}) }}
+
+<hr>
+
+{{ forms.lightswitchField({
+	label: 'Explain the output in devMode'|t('seokit'),
+	instructions: 'Adds an HTML comment above the meta block listing where every value came from. Never rendered outside devMode.'|t('seokit'),
+	id: 'originComments',
+	name: 'originComments',
+	on: settings.originComments,
+}) }}

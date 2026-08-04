@@ -1,0 +1,17 @@
+{% extends "_layouts/cp" %}
+
+{% set title = 'SEO settings'|t('seokit') %}
+{% set selectedSubnavItem = 'settings' %}
+{% set fullPageForm = true %}
+
+{% block content %}
+	<input type="hidden" name="action" value="plugins/save-plugin-settings">
+	<input type="hidden" name="pluginHandle" value="seokit">
+	{{ redirectInput('seokit/settings') }}
+
+	{# The partial is written for the plugin settings screen, where Craft
+	   namespaces everything itself. On our own page we do it here. #}
+	{% namespace 'settings' %}
+		{% include "seokit/cp/settings" %}
+	{% endnamespace %}
+{% endblock %}

@@ -1,0 +1,149 @@
+/**
+ * SeoKit field styling.
+ *
+ * Only Craft's own custom properties, no hardcoded colours: the control panel
+ * ships light and dark themes and a field that ignores them looks broken in
+ * one of the two.
+ */
+
+.seokit-previews {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.seokit-preview__label {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--light-text-color);
+	margin-bottom: 6px;
+}
+
+.seokit-preview > .seokit-serp,
+.seokit-preview > .seokit-social {
+	border: 1px solid var(--hairline-color);
+	border-radius: var(--large-border-radius, 8px);
+	background: var(--white, #fff);
+	overflow: hidden;
+}
+
+/* Search result */
+
+.seokit-serp {
+	padding: 14px 16px;
+}
+
+.seokit-serp__url {
+	font-size: 12px;
+	color: var(--medium-text-color);
+	margin-bottom: 4px;
+	word-break: break-all;
+}
+
+.seokit-serp__title {
+	font-size: 18px;
+	line-height: 1.3;
+	color: var(--link-color);
+	margin-bottom: 4px;
+}
+
+.seokit-serp__description {
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--text-color);
+}
+
+/* Shared link */
+
+.seokit-social__image {
+	aspect-ratio: 1.91 / 1;
+	background: var(--gray-050, #f3f7fc);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-bottom: 1px solid var(--hairline-color);
+}
+
+.seokit-social__image img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.seokit-social__empty {
+	font-size: 12px;
+	color: var(--light-text-color);
+}
+
+.seokit-social__body {
+	padding: 10px 14px;
+}
+
+.seokit-social__domain {
+	font-size: 11px;
+	text-transform: uppercase;
+	color: var(--light-text-color);
+	margin-bottom: 2px;
+}
+
+.seokit-social__title {
+	font-weight: 600;
+	line-height: 1.3;
+	margin-bottom: 2px;
+}
+
+.seokit-social__description {
+	font-size: 12px;
+	color: var(--medium-text-color);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/* An empty line still takes up its line, so clearing the description does not
+   make the whole card jump a row. */
+
+[data-seokit-preview].is-empty {
+	min-height: 1.45em;
+}
+
+/* Length feedback */
+
+.seokit-counter {
+	font-size: 12px;
+	margin: -16px 0 24px;
+	color: var(--light-text-color);
+}
+
+.seokit-counter.is-empty {
+	visibility: hidden;
+}
+
+.seokit-counter.is-short {
+	color: var(--medium-text-color);
+}
+
+.seokit-counter.is-ok {
+	color: var(--enabled-color, #27ab83);
+}
+
+.seokit-counter.is-long {
+	color: var(--warning-color, #da5a47);
+}
+
+.seokit-advanced {
+	margin-top: 8px;
+	border-top: 1px solid var(--hairline-color);
+	padding-top: 12px;
+}
+
+.seokit-advanced > summary {
+	cursor: pointer;
+	font-weight: 500;
+	color: var(--medium-text-color);
+	margin-bottom: 12px;
+}
