@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.0.0-alpha.4 - unreleased
+## 1.0.0 - 2026-08-04
+
+First tagged release, running on viesrood.nl in place of SEOmatic. The four
+alpha sections below were never tagged separately; they are the path to this
+release, and everything in them ships in it.
 
 ### Added
 - Pages are served as markdown to callers that ask for it: an
@@ -46,8 +50,9 @@
 - Optional cooperation with BridgeKit: when it is installed, URLs that
   redirect are left out of the sitemap. Neither plugin can see that on its
   own, and Search Console reports every redirecting sitemap URL as an error
-- A test suite: 43 unit tests over the text extraction, the resolution's
-  fallback rule and the settings normalisation, plus PHPStan at level 6
+- A test suite: 101 unit tests over the text extraction, the resolution's
+  fallback rule, the settings normalisation, the Accept negotiation, the
+  markdown conversion and the two generated text files, plus PHPStan at level 6
 
 ### Fixed
 - The sitemap cache never expired on an entry save. It depended on the tag
@@ -66,7 +71,7 @@
 - The WebPage node referenced a BreadcrumbList that is not emitted for a
   single-crumb page, leaving a dangling `@id` on every homepage
 
-## 1.0.0-alpha.3 - unreleased
+## 1.0.0-alpha.3 - pre-release
 
 ### Added
 - Per entry type: "In search engines". A whole section that must never be
@@ -85,7 +90,7 @@
 - A template that sets `robots` itself is no longer overwritten by the
   composed directive
 
-## 1.0.0-alpha.2 - unreleased
+## 1.0.0-alpha.2 - pre-release
 
 ### Added
 - Per entry type, in the control panel: which field the title, description and
@@ -106,7 +111,7 @@
 - Values without spaces (`section-b-padding`, `default`) are no longer treated
   as prose when guessing a description out of block fields
 
-## 1.0.0-alpha.1 - unreleased
+## 1.0.0-alpha.1 - pre-release
 
 Phase 1: replaces SEOmatic for meta, sitemaps and robots.txt.
 
