@@ -60,6 +60,40 @@ final class SettingsTest extends TestCase
         self::assertSame($verwacht, $settings->entryTypeConfig('uid')['indexable']);
     }
 
+    #[DataProvider('schakelaarWaarden')]
+    public function testMarkdownReadsEveryShapeOfSwitch(mixed $opgeslagen, bool $verwacht): void
+    {
+        $settings = new Settings();
+        $settings->entryTypes = ['uid' => ['markdown' => $opgeslagen]];
+
+        self::assertSame($verwacht, $settings->entryTypeConfig('uid')['markdown']);
+    }
+
+    public function testMarkdownFollowsIndexable(): void
+    {
+        // A page asking not to be listed should not be handing out a cleaner,
+        // cheaper copy of itself to read instead.
+        $settings = new Settings();
+        $settings->entryTypes = ['uid' => ['indexable' => false, 'markdown' => true]];
+
+        self::assertFalse($settings->entryTypeConfig('uid')['markdown']);
+    }
+
+    public function testAnUnconfiguredEntryTypeIsOfferedAsMarkdown(): void
+    {
+        self::assertTrue((new Settings())->entryTypeConfig('onbekende-uid')['markdown']);
+    }
+
+    public function testExtraLinksTextareaBecomesAList(): void
+    {
+        $settings = new Settings();
+        $settings->setAttributes([
+            'llmsExtraLinks' => "https://example.com/a: A\n\n  https://example.com/b  \n",
+        ], false);
+
+        self::assertSame(['https://example.com/a: A', 'https://example.com/b'], $settings->llmsExtraLinks);
+    }
+
     public function testSitemapFollowsIndexable(): void
     {
         // A sitemap announcing a page that says noindex is a contradiction,

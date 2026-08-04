@@ -46,6 +46,7 @@ class OverviewController extends Controller
             'checks' => $this->checks(),
             'entryTypes' => $this->entryTypes(),
             'profiles' => ResolveService::profiles(),
+            'markdownEnabled' => $settings->markdownEnabled,
             'sitemapUrl' => UrlHelper::siteUrl('sitemap.xml'),
             'sections' => $plugin->getSitemap()->sections(),
         ]);
@@ -57,6 +58,7 @@ class OverviewController extends Controller
     private function checks(): array
     {
         $plugin = Plugin::getInstance();
+        $settings = $plugin->getSettings();
         $checks = [];
 
         // The field being in no field layout at all is the single most common
@@ -94,7 +96,7 @@ class OverviewController extends Controller
                 'detail' => Craft::t('seokit', 'Pages still get a correct title, description and social card. Run `php craft seokit/setup/field` to let editors override that.'),
             ];
 
-        $checks[] = $plugin->getSettings()->sitemapEnabled
+        $checks[] = $settings->sitemapEnabled
             ? [
                 'status' => 'ok',
                 'label' => Craft::t('seokit', 'Sitemap is being served'),
@@ -106,9 +108,42 @@ class OverviewController extends Controller
                 'detail' => Craft::t('seokit', 'Search engines fall back to crawling links only.'),
             ];
 
+        $checks[] = $settings->markdownEnabled
+            ? [
+                'status' => 'ok',
+                'label' => Craft::t('seokit', 'Pages are available as markdown'),
+                'detail' => Craft::t('seokit', 'Agents sending `Accept: text/markdown` get roughly a fifth of the tokens an HTML page costs them.'),
+            ]
+            : [
+                'status' => 'info',
+                'label' => Craft::t('seokit', 'Markdown for agents is off'),
+                'detail' => Craft::t('seokit', 'Agents read the HTML instead, which works and costs them several times more context.'),
+            ];
+
+        if ($settings->llmsTxtEnabled) {
+            $checks[] = [
+                'status' => 'ok',
+                'label' => Craft::t('seokit', 'llms.txt is being served'),
+                'detail' => UrlHelper::siteUrl('llms.txt'),
+            ];
+        }
+
+        // A body written before these settings existed has no token, and the
+        // block is appended in that case. Worth saying, because "appended at
+        // the end" is not where everyone would have put it.
+        $aiOn = $settings->blockAiTraining || $settings->blockAiSearch;
+
+        if ($aiOn && $settings->robotsTxtEnabled && !str_contains($settings->robotsTxt, '{aiCrawlers}')) {
+            $checks[] = [
+                'status' => 'info',
+                'label' => Craft::t('seokit', 'AI crawler rules are appended to robots.txt'),
+                'detail' => Craft::t('seokit', 'The robots.txt body has no {aiCrawlers} token, so the block goes at the end. Add the token to place it yourself.'),
+            ];
+        }
+
         $physical = $plugin->getRobots()->physicalFile();
 
-        if ($physical !== null && $plugin->getSettings()->robotsTxtEnabled) {
+        if ($physical !== null && $settings->robotsTxtEnabled) {
             $checks[] = [
                 'status' => 'warning',
                 'label' => Craft::t('seokit', 'robots.txt is a file on disk'),
@@ -191,6 +226,7 @@ class OverviewController extends Controller
                     'profile' => $configured[$entryType->uid]['profile'] ?? 'auto',
                     'guessed' => $guessed['profile'],
                     'sitemap' => $configured[$entryType->uid]['sitemap'] ?? true,
+                    'markdown' => $configured[$entryType->uid]['markdown'] ?? true,
                     'indexable' => $configured[$entryType->uid]['indexable'] ?? true,
                     'titleField' => $configured[$entryType->uid]['titleField'] ?? '',
                     'descriptionField' => $configured[$entryType->uid]['descriptionField'] ?? '',

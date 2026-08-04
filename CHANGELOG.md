@@ -3,6 +3,36 @@
 ## 1.0.0-alpha.4 - unreleased
 
 ### Added
+- Pages are served as markdown to callers that ask for it: an
+  `Accept: text/markdown` header on the page's own URL, a `.md` suffix on it,
+  or the `<link rel="alternate">` that points at the second. A page of a real
+  site is roughly 16,000 tokens as HTML and roughly 3,000 as markdown, and
+  agents send that header today, which is more than can be said for any of the
+  conventions invented for this. The negotiation is a real q-value comparison
+  rather than a substring test: markdown has to be named explicitly and beat
+  every claim HTML makes, wildcards included, because the alternative is
+  handing raw markdown to a browser and never hearing about it
+- Both variants carry `Vary: Accept`. Without it a CDN caches whichever it saw
+  first and serves that to everyone, which is the failure mode that makes
+  content negotiation look unreliable
+- AI crawler rules in robots.txt, as two switches rather than one. Refusing to
+  be training data (GPTBot, ClaudeBot, Google-Extended, Applebot-Extended and
+  company) costs nothing in search results; refusing the answer engines
+  (OAI-SearchBot, Claude-SearchBot, PerplexityBot) removes the site from AI
+  answers including the links back. Those are different decisions and they do
+  not belong on one axis. A disabled group writes nothing at all, because an
+  explicit `Allow: /` group for a bot silently cancels every rule the `*` group
+  has for it
+- A `Content-Signal` line to state intent alongside those rules, with a warning
+  when it claims the opposite of what the switches do
+- `/llms.txt`, listing the same pages as the sitemap, capped per section and
+  overall, with the truncation written into the file rather than left to the
+  reader to discover. Delivered with a caveat that is also in the README: in a
+  90-day sample, 84 of 62,100 AI bot requests asked for this file. It is here
+  because it costs one route, not because the crawlers read it
+- An "AI agents" screen for all of the above, and a per entry type markdown
+  switch on the overview that follows "In search engines" the way the sitemap
+  toggle already does
 - `craft.seokit.video()`: templates register the videos they embed and those
   become `VideoObject` nodes in the graph. The call takes the oEmbed response
   the template already holds, so it costs no extra request to the video host.
@@ -20,6 +50,14 @@
   fallback rule and the settings normalisation, plus PHPStan at level 6
 
 ### Fixed
+- The sitemap cache never expired on an entry save. It depended on the tag
+  `element::craft\elements\Entry`, which Craft only invalidates when a section
+  or entry type changes; a saved entry invalidates `element::…::*`. The sitemap
+  was therefore up to 24 hours stale, and nothing about it looked wrong
+- The robots.txt screen listed Disallow rules from named user agent groups
+  under the warning that Disallow does not mean "keep out of Google". It now
+  only lists rules that reach every crawler, so a deliberate `Disallow: /` for
+  GPTBot is not presented as a mistake
 - Only closing tags counted as word separators when stripping markup, so text
   before a list ran into its first item (`twee<li>drie` became `tweedrie`)
 - A sentence ending at exactly half the description budget was rejected, even

@@ -6,9 +6,11 @@ namespace viesrood\seokit\services;
 
 use Craft;
 use craft\base\Component;
+use craft\base\ElementInterface;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use Twig\Markup;
+use viesrood\seokit\helpers\Url;
 use viesrood\seokit\models\MetaResolution;
 use viesrood\seokit\Plugin;
 
@@ -166,6 +168,12 @@ class RenderService extends Component
             }
         }
 
+        $markdownUrl = $this->markdownUrl($canonical);
+
+        if ($markdownUrl !== '') {
+            $lines[] = sprintf('<link rel="alternate" type="text/markdown" href="%s">', Html::encode($markdownUrl));
+        }
+
         $lines[] = $this->meta('property', 'og:type', $resolution->getString('ogType', 'website'));
         $lines[] = $this->meta('property', 'og:title', $resolution->getString('ogTitle'));
 
@@ -222,6 +230,39 @@ class RenderService extends Component
         }
 
         return new Markup(implode("\n", array_filter($lines)), 'UTF-8');
+    }
+
+    /**
+     * The `.md` twin of this page, or an empty string when there is not one.
+     *
+     * Only advertised when the canonical is this page's own URL. A canonical
+     * pointing somewhere else says "the real version of this content lives
+     * over there", and in that case the markdown of *this* URL is not what
+     * should be read instead.
+     */
+    private function markdownUrl(string $canonical): string
+    {
+        if ($canonical === '' || !Plugin::getInstance()->getSettings()->markdownEnabled) {
+            return '';
+        }
+
+        $element = Craft::$app->getUrlManager()->getMatchedElement();
+
+        if (!$element instanceof ElementInterface || !Plugin::getInstance()->getMarkdown()->includes($element)) {
+            return '';
+        }
+
+        $own = $element->getUrl();
+
+        if ($own === null || rtrim(Url::absolute($own), '/') !== rtrim($canonical, '/')) {
+            return '';
+        }
+
+        // The homepage has no path of its own to hang a suffix on, so it gets
+        // the conventional index.md rather than a bare "/.md".
+        $path = trim((string)parse_url($canonical, PHP_URL_PATH), '/');
+
+        return rtrim($canonical, '/') . ($path === '' ? '/index.md' : '.md');
     }
 
     /**

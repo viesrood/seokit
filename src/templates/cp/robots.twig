@@ -68,7 +68,7 @@
 
 		{{ forms.textareaField({
 			label: 'Contents'|t('seokit'),
-			instructions: '{sitemap} expands to the sitemap index URL.'|t('seokit'),
+			instructions: '{sitemap} expands to the sitemap index URL, {llms} to the llms.txt URL, and {aiCrawlers} to the block from the AI settings below. Leave that last one out and the block is appended at the end.'|t('seokit'),
 			id: 'robotsTxt',
 			name: 'robotsTxt',
 			value: settings.robotsTxt,
@@ -87,9 +87,65 @@
 
 		{% if disallowRules|length %}
 			<p class="light">
-				{{ 'Currently disallowed:'|t('seokit') }}
+				{{ 'Disallowed for every crawler:'|t('seokit') }}
 				{% for rule in disallowRules %}<code>{{ rule }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
 			</p>
+		{% endif %}
+
+		<hr>
+
+		<h2>{{ 'AI crawlers'|t('seokit') }}</h2>
+
+		<div class="readable">
+			<p class="light">
+				{{ 'Two separate decisions. Refusing to be training data costs nothing in search results. Refusing the answer engines takes this site out of ChatGPT, Claude and Perplexity answers, including the links back to it.'|t('seokit') }}
+			</p>
+		</div>
+
+		{{ forms.lightswitchField({
+			label: 'Block AI training crawlers'|t('seokit'),
+			instructions: 'GPTBot, ClaudeBot, Amazonbot, Bytespider, CCBot and the Google-Extended and Applebot-Extended opt-out tokens. Those last two are not crawlers: blocking them keeps Gemini and Apple Intelligence from training on this site without affecting Googlebot or Applebot.'|t('seokit'),
+			id: 'blockAiTraining',
+			name: 'blockAiTraining',
+			on: settings.blockAiTraining,
+		}) }}
+
+		{{ forms.lightswitchField({
+			label: 'Block AI answer engines'|t('seokit'),
+			instructions: 'OAI-SearchBot, ChatGPT-User, Claude-SearchBot, Claude-User and PerplexityBot. These fetch a page to answer a question and link back to it, so blocking them removes this site from those answers.'|t('seokit'),
+			id: 'blockAiSearch',
+			name: 'blockAiSearch',
+			on: settings.blockAiSearch,
+		}) }}
+
+		{{ forms.textField({
+			label: 'Content-Signal'|t('seokit'),
+			instructions: 'A statement of intent for crawlers that read it, on one line. It is not enforcement: the switches above are. Empty means say nothing.'|t('seokit'),
+			id: 'contentSignal',
+			name: 'contentSignal',
+			value: settings.contentSignal,
+			class: 'code',
+		}) }}
+
+		{% if contradictions|length %}
+			<div class="readable">
+				<blockquote class="note warning">
+					<p>
+						{{ 'Content-Signal says {directives} while those crawlers are being blocked above. Only the rules are enforced, so the file would claim one thing and do another.'|t('seokit', { directives: contradictions|join(', ') }) }}
+					</p>
+				</blockquote>
+			</div>
+		{% endif %}
+
+		<div class="readable">
+			<p class="light">
+				{{ 'Not every crawler obeys robots.txt; Bytespider has a history of ignoring it. This is the strongest signal available, not a guarantee.'|t('seokit') }}
+			</p>
+		</div>
+
+		{% if aiBlock|trim %}
+			<h3>{{ 'Added to robots.txt'|t('seokit') }}</h3>
+			<pre class="code" style="white-space: pre-wrap;">{{ aiBlock }}</pre>
 		{% endif %}
 
 	{% endnamespace %}

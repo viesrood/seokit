@@ -61,6 +61,42 @@ not a trap.
   already fetched
 - Per entry type, in the control panel: which field the title, description and
   sharing image should come from
+- Markdown for AI agents, AI crawler rules in robots.txt and an llms.txt
+
+## For AI agents
+
+Three surfaces, in order of how much they actually do.
+
+**The same page as markdown.** An agent sending `Accept: text/markdown` gets
+the page as markdown instead of HTML: about 3,000 tokens where the HTML costs
+about 16,000. The same document is at `/werk/neo.md` next to `/werk/neo`, and a
+`<link rel="alternate" type="text/markdown">` points at it.
+
+The negotiation is strict on purpose. Markdown wins only when it is named
+explicitly and outranks every claim HTML can make, wildcards included, and a
+tie goes to HTML. The common shortcut, `str_contains($header, 'text/markdown')`,
+hands raw markdown to any browser that sends a wildcard, and nothing errors
+when it does.
+
+Both variants carry `Vary: Accept`. If a static page cache sits in front of
+Craft, it has to let `text/markdown` requests through and repeat that header,
+or it will serve one variant to everybody.
+
+**AI crawler rules in robots.txt.** Two switches, because they are two
+decisions. Blocking training crawlers (GPTBot, ClaudeBot, Google-Extended,
+Applebot-Extended and company) costs nothing in search results. Blocking the
+answer engines (OAI-SearchBot, Claude-SearchBot, PerplexityBot) takes the site
+out of AI answers, links back included. A `Content-Signal` line states intent
+alongside them, and the control panel says out loud that a statement is not
+enforcement.
+
+**llms.txt.** Served at `/llms.txt`, listing the same pages as the sitemap,
+capped and with the cut written into the file.
+
+Be honest about that last one: in a 90-day sample, 84 out of 62,100 AI bot
+requests asked for `/llms.txt`, and no major vendor has committed to reading
+it. It is here because it costs one route and one cache entry, not because it
+is what makes a site legible to a model. The markdown above is.
 
 ## What you deliberately do not get
 
@@ -191,7 +227,11 @@ switches; the robots.txt route stays SEOmatic's until the plugin is removed.
 
 ## Requirements
 
-Craft CMS 5.0+, PHP 8.2+.
+Craft CMS 5.0+, PHP 8.2+, and `league/html-to-markdown` (pulled in
+automatically). That is SeoKit's only runtime dependency besides Craft, and it
+is there so the markdown conversion is one small MIT library rather than a
+hand-written DOM walker that has to stay correct for headings, nested lists,
+tables and malformed markup forever.
 
 ## Licence
 

@@ -7,6 +7,7 @@ namespace viesrood\seokit\controllers;
 use Craft;
 use craft\helpers\UrlHelper;
 use craft\web\Controller;
+use viesrood\seokit\helpers\AiCrawlers;
 use viesrood\seokit\Plugin;
 use yii\web\Response;
 
@@ -67,13 +68,33 @@ class SettingsController extends Controller
         $this->requirePermission('seokit:manage');
 
         $plugin = Plugin::getInstance();
+        $settings = $plugin->getSettings();
 
         return $this->renderTemplate('seokit/cp/robots', [
-            'settings' => $plugin->getSettings(),
+            'settings' => $settings,
             'physicalFile' => $plugin->getRobots()->physicalFile(),
             'disallowRules' => $plugin->getRobots()->disallowRules(),
+            'aiBlock' => $plugin->getRobots()->aiCrawlerBlock(),
+            'contradictions' => AiCrawlers::contradictions(
+                $settings->blockAiTraining,
+                $settings->blockAiSearch,
+                $settings->contentSignal,
+            ),
             'sitemapUrl' => UrlHelper::siteUrl('sitemap.xml'),
             'sections' => $plugin->getSitemap()->sections(),
+        ]);
+    }
+
+    public function actionAi(): Response
+    {
+        $this->requirePermission('seokit:manage');
+
+        $plugin = Plugin::getInstance();
+
+        return $this->renderTemplate('seokit/cp/ai', [
+            'settings' => $plugin->getSettings(),
+            'llmsUrl' => UrlHelper::siteUrl('llms.txt'),
+            'sectionCount' => $plugin->getLlms()->sectionCount(),
         ]);
     }
 }

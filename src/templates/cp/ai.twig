@@ -1,0 +1,102 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% set title = 'AI agents'|t('seokit') %}
+{% set selectedSubnavItem = 'ai' %}
+{% set fullPageForm = true %}
+
+{% block content %}
+	{# Bewust niet plugins/save-plugin-settings: die bewaart alleen de geposte
+	   sleutels en vervangt daarmee de rest van de instellingen. #}
+	<input type="hidden" name="action" value="seokit/settings/save">
+	{{ redirectInput('seokit/ai') }}
+
+	{% namespace 'settings' %}
+
+		<div class="readable">
+			<p class="light">
+				{{ 'What an AI agent reads is not what a search engine reads. The rules about which crawlers are welcome live on the robots and sitemap screen, because that is one file and it belongs on one page.'|t('seokit') }}
+			</p>
+		</div>
+
+		<h2>{{ 'Markdown for agents'|t('seokit') }}</h2>
+
+		<div class="readable">
+			<p class="light">
+				{{ 'The same page as markdown, for callers that ask for it. A page of this site is roughly 16,000 tokens as HTML and roughly 3,000 as markdown, and agents ask for it today by sending an Accept header. This is the part of this screen that does the work.'|t('seokit') }}
+			</p>
+		</div>
+
+		{{ forms.lightswitchField({
+			label: 'Serve pages as markdown'|t('seokit'),
+			instructions: 'Three ways in: an `Accept: text/markdown` header on the page URL, a `.md` suffix on it, and a link tag pointing at the second. Per entry type this can be switched off on the overview screen.'|t('seokit'),
+			id: 'markdownEnabled',
+			name: 'markdownEnabled',
+			on: settings.markdownEnabled,
+		}) }}
+
+		{% if settings.markdownEnabled %}
+			<div class="readable">
+				<blockquote class="note">
+					<p>
+						{{ 'A static page cache in front of Craft serves whatever it stored, without reading the Accept header. If this site has one, let requests carrying `text/markdown` through to Craft, and make sure the cached HTML carries `Vary: Accept`.'|t('seokit') }}
+					</p>
+				</blockquote>
+			</div>
+		{% endif %}
+
+		<hr>
+
+		<h2>{{ 'llms.txt'|t('seokit') }}</h2>
+
+		<div class="readable">
+			<blockquote class="note">
+				<p>
+					{{ 'Be realistic about this file. In a 90-day sample, 84 out of 62,100 AI bot requests asked for it, and no major vendor has committed to reading it. It is here because it costs one route, not because it is what makes this site legible to a model.'|t('seokit') }}
+				</p>
+			</blockquote>
+		</div>
+
+		{{ forms.lightswitchField({
+			label: 'Serve llms.txt'|t('seokit'),
+			id: 'llmsTxtEnabled',
+			name: 'llmsTxtEnabled',
+			on: settings.llmsTxtEnabled,
+		}) }}
+
+		{% if settings.llmsTxtEnabled %}
+			<p class="light">
+				<a href="{{ llmsUrl }}" target="_blank" rel="noopener">{{ llmsUrl }}</a>
+				{{ '({count} sections, the same pages as the sitemap)'|t('seokit', { count: sectionCount }) }}
+			</p>
+		{% endif %}
+
+		{{ forms.textField({
+			label: 'Summary'|t('seokit'),
+			instructions: 'One line under the heading, describing what this site is. Empty falls back to the fallback description from the settings screen.'|t('seokit'),
+			id: 'llmsSummary',
+			name: 'llmsSummary',
+			value: settings.llmsSummary,
+		}) }}
+
+		{{ forms.textareaField({
+			label: 'Introduction'|t('seokit'),
+			instructions: 'Free text between the summary and the page lists. Markdown.'|t('seokit'),
+			id: 'llmsIntro',
+			name: 'llmsIntro',
+			value: settings.llmsIntro,
+			rows: 4,
+		}) }}
+
+		{{ forms.textareaField({
+			label: 'Extra links'|t('seokit'),
+			instructions: 'One per line, as `https://example.com/page: what it is`. These end up under "Optional", the section an agent may skip when it is short on context.'|t('seokit'),
+			id: 'llmsExtraLinks',
+			name: 'llmsExtraLinks',
+			value: settings.llmsExtraLinks|join("\n"),
+			rows: 4,
+			class: 'code',
+		}) }}
+
+	{% endnamespace %}
+{% endblock %}

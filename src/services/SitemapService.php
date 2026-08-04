@@ -98,11 +98,28 @@ class SitemapService extends Component
 
         $xml = $this->buildSection($section);
 
-        $cache->set($key, $xml, self::CACHE_DURATION, new TagDependency([
-            'tags' => ['element::' . Entry::class],
-        ]));
+        $cache->set($key, $xml, self::CACHE_DURATION, self::dependency());
 
         return $xml;
+    }
+
+    /**
+     * Invalidate on any entry change.
+     *
+     * Both tags, and the difference matters. Craft invalidates
+     * `element::<class>::*` when an entry is saved, and the plain
+     * `element::<class>` only when the section or entry type structure
+     * changes. Depending on the second alone is how a sitemap keeps serving
+     * yesterday's pages for a day: nothing errors, it is just quietly wrong.
+     */
+    public static function dependency(): TagDependency
+    {
+        return new TagDependency([
+            'tags' => [
+                sprintf('element::%s::*', Entry::class),
+                'element::' . Entry::class,
+            ],
+        ]);
     }
 
     private function buildSection(Section $section): string
@@ -129,7 +146,7 @@ class SitemapService extends Component
         foreach ($query->all() as $entry) {
             $url = $this->entryUrl($entry);
 
-            if ($url === null || !$this->isIndexable($entry)) {
+            if ($url === null || !$this->includesEntry($entry)) {
                 continue;
             }
 
@@ -226,12 +243,14 @@ class SitemapService extends Component
     }
 
     /**
-     * Whether this specific entry belongs in the sitemap.
+     * Whether this specific entry counts as public knowledge.
      *
      * A sitemap listing a page that says noindex is a contradiction, and
-     * Search Console reports it as one.
+     * Search Console reports it as one. Public rather than private because
+     * llms.txt asks the same question of the same pages, and "which pages does
+     * this site publish" deserves exactly one definition.
      */
-    private function isIndexable(Entry $entry): bool
+    public function includesEntry(Entry $entry): bool
     {
         $settings = Plugin::getInstance()->getSettings();
 

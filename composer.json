@@ -20,8 +20,9 @@
         "source": "https://github.com/viesrood/seokit"
     },
     "require": {
+        "php": ">=8.2",
         "craftcms/cms": "^5.0.0",
-        "php": ">=8.2"
+        "league/html-to-markdown": "^5.1"
     },
     "suggest": {
         "viesrood/bridgekit": "Redirects and 404 handling. SeoKit leaves redirected URLs out of the sitemap when it is installed."

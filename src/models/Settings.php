@@ -172,7 +172,11 @@ class Settings extends Model
     public bool $robotsTxtEnabled = false;
 
     /**
-     * robots.txt body. {sitemap} expands to the absolute sitemap index URL.
+     * robots.txt body. {sitemap} expands to the absolute sitemap index URL,
+     * {llms} to the llms.txt URL, and {aiCrawlers} to the block the AI settings
+     * below produce. Leave that last token out and the block is appended
+     * instead, so the switches work without anyone having to edit this text
+     * first.
      *
      * Note the absence of Disallow rules for pages you want kept out of the
      * index: a disallowed URL is never crawled, so the noindex you put on the
@@ -180,6 +184,84 @@ class Settings extends Model
      * crawling open and let the meta robots tag do the work.
      */
     public string $robotsTxt = "User-agent: *\nAllow: /\n\nSitemap: {sitemap}\n";
+
+    /**
+     * Serve pages as markdown to callers that ask for it.
+     *
+     * Three ways in: an `Accept: text/markdown` header on the page's own URL, a
+     * `.md` suffix on that URL, and a `<link rel="alternate">` pointing at the
+     * second. The header is the one that matters; agents send it today.
+     *
+     * On by default. The negotiation is strict enough that a browser cannot
+     * trip it, and a page nobody asks for in markdown costs nothing.
+     */
+    public bool $markdownEnabled = true;
+
+    /**
+     * Serve /llms.txt: a plain-text index of this site for language models.
+     *
+     * Honest about what this is: in a 90-day sample, 84 of 62,100 AI bot
+     * requests asked for this file, and no major vendor has committed to
+     * reading it. It is on by default anyway because it costs one route and
+     * one cache entry, and because the file is cheap to be wrong about and
+     * impossible to be harmed by.
+     */
+    public bool $llmsTxtEnabled = true;
+
+    /**
+     * The one-line summary under the heading of llms.txt.
+     *
+     * Empty falls back to the fallback description, and then to nothing: the
+     * spec only requires the heading.
+     */
+    public string $llmsSummary = '';
+
+    /**
+     * Free text between the summary and the section lists. Markdown.
+     */
+    public string $llmsIntro = '';
+
+    /**
+     * Extra links for the "Optional" section, one per line as
+     * `https://example.com/page: what it is`.
+     *
+     * Optional is the section of the spec an agent may skip when its context
+     * is tight, which makes it the right home for anything hand-added rather
+     * than derived.
+     *
+     * @var string[]
+     */
+    public array $llmsExtraLinks = [];
+
+    /**
+     * Keep AI crawlers that collect training material out.
+     *
+     * Off by default, because turning it on is a decision about what the site
+     * is for, not a safety measure. It costs nothing in search results though:
+     * the tokens involved are separate from Googlebot and Applebot.
+     */
+    public bool $blockAiTraining = false;
+
+    /**
+     * Keep AI answer engines out.
+     *
+     * Deliberately a second switch rather than the other half of one setting.
+     * This one takes the site out of ChatGPT, Claude and Perplexity answers,
+     * including the links back, which is a very different trade-off from
+     * refusing to be training data.
+     */
+    public bool $blockAiSearch = false;
+
+    /**
+     * Content-Signal directives, emitted in robots.txt for the crawlers that
+     * read them. Empty means say nothing.
+     *
+     * A declaration of intent, not enforcement: the Disallow rules above are
+     * what actually stops anything. It is here because the two switches are
+     * all-or-nothing per group, while this can say "read me to answer a
+     * question, do not train on me" in one line.
+     */
+    public string $contentSignal = 'search=yes, ai-input=yes, ai-train=no';
 
     /**
      * Environments where the body above is served as written.
@@ -202,6 +284,7 @@ class Settings extends Model
      *   ['<uid>' => [
      *       'indexable' => bool,
      *       'sitemap' => bool,
+     *       'markdown' => bool,
      *       'profile' => string,
      *       'titleField' => string,
      *       'descriptionField' => string,
@@ -214,7 +297,7 @@ class Settings extends Model
      * requirement: if that field is empty on a given entry, the guesser fills
      * the gap rather than leaving the page without a description.
      *
-     * @var array<string, array{sitemap?: bool, profile?: string, titleField?: string, descriptionField?: string, imageField?: string}>
+     * @var array<string, array{sitemap?: bool, markdown?: bool, profile?: string, titleField?: string, descriptionField?: string, imageField?: string}>
      */
     public array $entryTypes = [];
 
@@ -250,9 +333,13 @@ class Settings extends Model
             $values[$key] = ($value === null || $value === '') ? null : (int)$value;
         }
 
-        if (isset($values['sameAs']) && is_string($values['sameAs'])) {
-            $lines = preg_split('/[\r\n]+/', $values['sameAs']) ?: [];
-            $values['sameAs'] = array_values(array_filter(array_map('trim', $lines)));
+        foreach (['sameAs', 'llmsExtraLinks'] as $key) {
+            if (!isset($values[$key]) || !is_string($values[$key])) {
+                continue;
+            }
+
+            $lines = preg_split('/[\r\n]+/', $values[$key]) ?: [];
+            $values[$key] = array_values(array_filter(array_map('trim', $lines)));
         }
 
         if (isset($values['robotsDirectives']) && is_string($values['robotsDirectives'])) {
@@ -294,7 +381,7 @@ class Settings extends Model
      * Comparing `=== false` against "" is how a page that was excluded from
      * the sitemap quietly reappears in it.
      *
-     * @return array{indexable: bool, sitemap: bool, profile: string, titleField: string, descriptionField: string, imageField: string}
+     * @return array{indexable: bool, sitemap: bool, markdown: bool, profile: string, titleField: string, descriptionField: string, imageField: string}
      */
     public function entryTypeConfig(string $uid): array
     {
@@ -317,12 +404,19 @@ class Settings extends Model
             ? filter_var($config['sitemap'], FILTER_VALIDATE_BOOL)
             : true;
 
+        $markdown = array_key_exists('markdown', $config)
+            ? filter_var($config['markdown'], FILTER_VALIDATE_BOOL)
+            : true;
+
         return [
             'indexable' => $indexable,
             // A sitemap announcing a page that says noindex is a
             // contradiction, and Search Console reports it as one. Rather than
             // letting the two settings disagree, one follows the other.
             'sitemap' => $indexable && $sitemap,
+            // Same reasoning: a page that asks not to be listed should not be
+            // handing out a cleaner, cheaper copy of itself to read instead.
+            'markdown' => $indexable && $markdown,
             'profile' => trim((string)($config['profile'] ?? 'auto')),
             'titleField' => trim((string)($config['titleField'] ?? '')),
             'descriptionField' => trim((string)($config['descriptionField'] ?? '')),

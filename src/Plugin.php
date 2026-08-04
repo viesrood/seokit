@@ -7,6 +7,8 @@ namespace viesrood\seokit;
 use Craft;
 use craft\base\Model;
 use craft\base\Plugin as BasePlugin;
+use craft\web\Application;
+use craft\web\Response;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterUrlRulesEvent;
 use craft\events\RegisterUserPermissionsEvent;
@@ -21,12 +23,16 @@ use craft\web\User as CraftUser;
 use craft\web\View;
 use viesrood\seokit\fields\SeoField;
 use viesrood\seokit\models\Settings;
+use viesrood\seokit\helpers\Accept;
+use viesrood\seokit\services\LlmsService;
+use viesrood\seokit\services\MarkdownService;
 use viesrood\seokit\services\RenderService;
 use viesrood\seokit\services\ResolveService;
 use viesrood\seokit\services\RobotsService;
 use viesrood\seokit\services\SchemaService;
 use viesrood\seokit\services\SitemapService;
 use viesrood\seokit\variables\SeoKitVariable;
+use yii\base\ActionEvent;
 use yii\base\Event;
 
 /**
@@ -47,6 +53,8 @@ use yii\base\Event;
  * @property-read SchemaService $schema
  * @property-read SitemapService $sitemap
  * @property-read RobotsService $robots
+ * @property-read LlmsService $llms
+ * @property-read MarkdownService $markdown
  */
 class Plugin extends BasePlugin
 {
@@ -68,6 +76,8 @@ class Plugin extends BasePlugin
                 'schema' => SchemaService::class,
                 'sitemap' => SitemapService::class,
                 'robots' => RobotsService::class,
+                'llms' => LlmsService::class,
+                'markdown' => MarkdownService::class,
             ],
         ];
     }
@@ -82,6 +92,8 @@ class Plugin extends BasePlugin
         $this->registerCpUrlRules();
         $this->registerSiteUrlRules();
         $this->registerHeadSubstitution();
+        $this->registerVaryHeader();
+        $this->registerMarkdownNegotiation();
 
         Craft::info('SeoKit plugin loaded', __METHOD__);
     }
@@ -126,6 +138,22 @@ class Plugin extends BasePlugin
         return $service;
     }
 
+    public function getLlms(): LlmsService
+    {
+        /** @var LlmsService $service */
+        $service = $this->get('llms');
+
+        return $service;
+    }
+
+    public function getMarkdown(): MarkdownService
+    {
+        /** @var MarkdownService $service */
+        $service = $this->get('markdown');
+
+        return $service;
+    }
+
     public function getSettings(): Settings
     {
         /** @var Settings $settings */
@@ -151,6 +179,7 @@ class Plugin extends BasePlugin
             'overview' => ['label' => Craft::t('seokit', 'Overview'), 'url' => 'seokit'],
             'settings' => ['label' => Craft::t('seokit', 'Settings'), 'url' => 'seokit/settings'],
             'robots' => ['label' => Craft::t('seokit', 'Robots and sitemap'), 'url' => 'seokit/robots'],
+            'ai' => ['label' => Craft::t('seokit', 'AI agents'), 'url' => 'seokit/ai'],
         ];
 
         return $item;
@@ -239,6 +268,7 @@ class Plugin extends BasePlugin
                 $event->rules['seokit'] = 'seokit/overview/index';
                 $event->rules['seokit/settings'] = 'seokit/settings/index';
                 $event->rules['seokit/robots'] = 'seokit/settings/robots';
+                $event->rules['seokit/ai'] = 'seokit/settings/ai';
                 $event->rules['seokit/save'] = 'seokit/settings/save';
             }
         );
@@ -268,9 +298,9 @@ class Plugin extends BasePlugin
     }
 
     /**
-     * robots.txt and the sitemaps are plain site requests.
+     * robots.txt, llms.txt and the sitemaps are plain site requests.
      *
-     * Both are registered unconditionally and check their own setting when
+     * All are registered unconditionally and check their own setting when
      * hit. Registering conditionally would mean the route table depends on
      * project config state at boot, and a stale cached route table is a bad
      * way to find out you turned the sitemap back on.
@@ -284,6 +314,97 @@ class Plugin extends BasePlugin
                 $event->rules['sitemap.xml'] = 'seokit/sitemap/index';
                 $event->rules['sitemap-<handle:[\w\-]+>.xml'] = 'seokit/sitemap/section';
                 $event->rules['robots.txt'] = 'seokit/robots/index';
+                $event->rules['llms.txt'] = 'seokit/llms/index';
+                $event->rules['<path:.+>.md'] = 'seokit/markdown/index';
+            }
+        );
+    }
+
+    /**
+     * Serve markdown when the request asked for markdown.
+     *
+     * Registered last in init() on purpose. This handler cancels the action
+     * when it fires, and a handler that cancels is only polite if everything
+     * else has already had its turn.
+     *
+     * EVENT_BEFORE_ACTION is the moment the URL manager has finished parsing,
+     * so the matched element is known, while the entry template has not run
+     * yet. Anything earlier has no element; anything later has already spent
+     * the work of rendering a page nobody asked for.
+     */
+    private function registerMarkdownNegotiation(): void
+    {
+        Event::on(
+            Application::class,
+            Application::EVENT_BEFORE_ACTION,
+            function (ActionEvent $event): void {
+                $request = Craft::$app->getRequest();
+
+                if (
+                    $request->getIsConsoleRequest()
+                    || !$request->getIsSiteRequest()
+                    || !$request->getIsGet()
+                    || $request->getIsActionRequest()
+                    || $request->getIsPreview()
+                    || !$this->getSettings()->markdownEnabled
+                ) {
+                    return;
+                }
+
+                if (!Accept::prefers($request->getAcceptableContentTypes())) {
+                    return;
+                }
+
+                $element = Craft::$app->getUrlManager()->getMatchedElement();
+
+                if ($element === false || !$this->getMarkdown()->includes($element)) {
+                    return;
+                }
+
+                $response = Craft::$app->getResponse();
+                $response->format = Response::FORMAT_RAW;
+                $response->getHeaders()
+                    ->set('Content-Type', 'text/markdown; charset=UTF-8')
+                    ->set('Vary', 'Accept');
+                $response->data = $this->getMarkdown()->render($element);
+
+                $event->isValid = false;
+            }
+        );
+    }
+
+    /**
+     * `Vary: Accept` on the HTML too, not only on the markdown.
+     *
+     * This is the header everyone forgets, and it breaks in the least
+     * observable way there is: a CDN caches whichever variant it saw first and
+     * serves that to everybody. Half the visitors get markdown, and the origin
+     * looks perfectly healthy the whole time.
+     */
+    private function registerVaryHeader(): void
+    {
+        Event::on(
+            Response::class,
+            Response::EVENT_BEFORE_SEND,
+            function (Event $event): void {
+                if (!$this->getSettings()->markdownEnabled) {
+                    return;
+                }
+
+                $request = Craft::$app->getRequest();
+
+                if ($request->getIsConsoleRequest() || !$request->getIsSiteRequest()) {
+                    return;
+                }
+
+                /** @var Response $response */
+                $response = $event->sender;
+                $headers = $response->getHeaders();
+                $vary = (string)$headers->get('Vary', '');
+
+                if (!str_contains(strtolower($vary), 'accept')) {
+                    $headers->set('Vary', $vary === '' ? 'Accept' : $vary . ', Accept');
+                }
             }
         );
     }

@@ -55,6 +55,7 @@
 					<th>{{ 'Schema profile'|t('seokit') }}</th>
 					<th class="thin">{{ 'In search engines'|t('seokit') }}</th>
 					<th class="thin">{{ 'In sitemap'|t('seokit') }}</th>
+					<th class="thin">{{ 'As markdown'|t('seokit') }}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -122,6 +123,17 @@
 									id: 'sitemap-' ~ row.uid,
 									name: 'entryTypes[' ~ row.uid ~ '][sitemap]',
 									on: row.sitemap,
+								}) }}
+							{% else %}
+								<span class="light">-</span>
+							{% endif %}
+						</td>
+						<td class="thin">
+							{% if row.hasUrls and row.indexable and markdownEnabled %}
+								{{ forms.lightswitch({
+									id: 'markdown-' ~ row.uid,
+									name: 'entryTypes[' ~ row.uid ~ '][markdown]',
+									on: row.markdown,
 								}) }}
 							{% else %}
 								<span class="light">-</span>
