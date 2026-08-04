@@ -57,6 +57,8 @@ not a trap.
 - One compact field: title, description, sharing image, index switch,
   canonical. Five things, with live search and social previews
 - Schema profiles guessed from entry type handles, in Dutch and English
+- `VideoObject` nodes for embedded video, from the oEmbed data your template
+  already fetched
 - Per entry type, in the control panel: which field the title, description and
   sharing image should come from
 
@@ -71,6 +73,42 @@ not a trap.
 - **No free-form JSON-LD editor.** Hand-written structured data drifts from
   the page it describes within a month, and wrong structured data is worse
   than none.
+
+## Video
+
+A template that embeds a video registers it:
+
+```twig
+{% do craft.seokit.video({
+    name: media.title,
+    description: block.desc,
+    thumbnailUrl: media.image,
+    uploadDate: media.publishedTime,
+    embedCode: media.code,
+    url: media.url,
+}) %}
+```
+
+Why the template and not the plugin: the template just fetched all of that
+from the video host, and asking again would be a second HTTP request per
+video for data already in hand. `embedCode` is only used to read the `src` of
+the provider's own iframe, which is the embed URL by definition and needs no
+per-host knowledge.
+
+Google wants a name, a description, a thumbnail and an upload date before it
+does anything with a video. Missing any of them means the node is left out
+rather than published incomplete: an error in Search Console costs attention,
+a missing node costs nothing that was going to work anyway. The upload date
+falls back to the page's publication date, because Vimeo's oEmbed response
+does not include one at all.
+
+## Redirects
+
+SeoKit does not do redirects and will not grow them. Install
+[BridgeKit](https://github.com/viesrood/bridgekit) for that. When it is
+present, SeoKit asks it which paths are spoken for and leaves them out of the
+sitemap: a redirecting URL in a sitemap is an error Search Console reports on
+every crawl, and neither plugin can see it alone.
 
 ## Choosing the fields yourself
 

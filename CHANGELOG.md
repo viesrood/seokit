@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.0.0-alpha.4 - unreleased
+
+### Added
+- `craft.seokit.video()`: templates register the videos they embed and those
+  become `VideoObject` nodes in the graph. The call takes the oEmbed response
+  the template already holds, so it costs no extra request to the video host.
+  A node missing a thumbnail or an upload date is left out rather than
+  published incomplete, and the upload date falls back to the page's own
+  publication date because Vimeo's oEmbed does not carry one
+- Person pages get `jobTitle` and `email` when the entry has them, and an
+  article's author is linked by `@id` to their own profile page when the site
+  has one. A name is a string; a name that points at a page is a person
+- `openingHours` for a local business
+- Optional cooperation with BridgeKit: when it is installed, URLs that
+  redirect are left out of the sitemap. Neither plugin can see that on its
+  own, and Search Console reports every redirecting sitemap URL as an error
+- A test suite: 43 unit tests over the text extraction, the resolution's
+  fallback rule and the settings normalisation, plus PHPStan at level 6
+
+### Fixed
+- Only closing tags counted as word separators when stripping markup, so text
+  before a list ran into its first item (`twee<li>drie` became `tweedrie`)
+- A sentence ending at exactly half the description budget was rejected, even
+  though a whole sentence beats a longer fragment
+- A branch in the content extraction that could never run
+- The WebPage node referenced a BreadcrumbList that is not emitted for a
+  single-crumb page, leaving a dangling `@id` on every homepage
+
 ## 1.0.0-alpha.3 - unreleased
 
 ### Added
