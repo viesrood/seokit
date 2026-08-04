@@ -67,6 +67,9 @@ class ResolveService extends Component
     /** @var array<string, ElementInterface|false> */
     private array $uriCache = [];
 
+    /** @var array<string, array<int, int>> */
+    private array $profileIdCache = [];
+
     /**
      * Whether the head has already been written into the page.
      */
@@ -510,6 +513,42 @@ class ResolveService extends Component
      * this method exists. It is a guess, it is always overridable, and being
      * wrong costs a dropdown.
      */
+    /**
+     * The entry type IDs that resolve to a given schema profile.
+     *
+     * Used to find the pages that describe people, so an article's author can
+     * point at the profile page of the person who wrote it instead of being a
+     * bare name. Reads the same configuration and the same guesser as
+     * everything else, so a corrected profile takes effect here too.
+     *
+     * @return array<int, int>
+     */
+    public function entryTypeIdsForProfile(string $profile): array
+    {
+        if (isset($this->profileIdCache[$profile])) {
+            return $this->profileIdCache[$profile];
+        }
+
+        $settings = Plugin::getInstance()?->getSettings();
+        $ids = [];
+
+        foreach (Craft::$app->getEntries()->getAllSections() as $section) {
+            foreach ($section->getEntryTypes() as $entryType) {
+                $configured = $settings?->entryTypeConfig($entryType->uid)['profile'] ?? 'auto';
+
+                $resolved = ($configured !== '' && $configured !== 'auto')
+                    ? $configured
+                    : $this->guessProfile((string)$entryType->handle);
+
+                if ($resolved === $profile) {
+                    $ids[] = (int)$entryType->id;
+                }
+            }
+        }
+
+        return $this->profileIdCache[$profile] = $ids;
+    }
+
     private function guessProfile(string $handle): string
     {
         $needle = strtolower($handle);

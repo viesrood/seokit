@@ -166,6 +166,16 @@
 	value: settings.telephone,
 }) }}
 
+{{ forms.textareaField({
+	label: 'Opening hours'|t('seokit'),
+	instructions: 'One per line, in schema.org notation: Mo-Fr 09:00-17:00. Only used for a local business.'|t('seokit'),
+	id: 'openingHours',
+	name: 'openingHours',
+	value: settings.openingHours,
+	rows: 3,
+	placeholder: 'Mo-Fr 09:00-17:00',
+}) }}
+
 {{ forms.textField({
 	label: 'X handle'|t('seokit'),
 	id: 'twitterSite',

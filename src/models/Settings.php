@@ -133,6 +133,14 @@ class Settings extends Model
     public string $twitterSite = '';
 
     /**
+     * Opening hours in schema.org notation, one per line: `Mo-Fr 09:00-17:00`.
+     *
+     * Only used when the organization type is a LocalBusiness, which is the
+     * only type the property means anything for.
+     */
+    public string $openingHours = '';
+
+    /**
      * Robots directives added to every indexable page.
      *
      * The three defaults are the ones that actually change how a result can

@@ -6,10 +6,14 @@ namespace viesrood\seokit\services;
 
 use Craft;
 use craft\base\Component;
+use craft\base\ElementInterface;
 use craft\elements\Asset;
+use craft\elements\Entry;
+use craft\helpers\Db;
 use craft\helpers\UrlHelper;
 use DateTimeImmutable;
 use DateTimeInterface;
+use Stringable;
 use Throwable;
 use viesrood\seokit\helpers\Text;
 use viesrood\seokit\helpers\Url;
@@ -33,6 +37,16 @@ use viesrood\seokit\Plugin;
  */
 class SchemaService extends Component
 {
+    /**
+     * Handles that hold someone's role, checked in order.
+     */
+    private const JOB_TITLE_FIELDS = ['role', 'jobTitle', 'jobtitle', 'functie', 'functietitel', 'position'];
+
+    private const EMAIL_FIELDS = ['emailAddress', 'email', 'emailadres'];
+
+    /** @var array<string, string|null> */
+    private static array $authorCache = [];
+
     /**
      * @return array<string, mixed>|null
      */
@@ -405,11 +419,7 @@ class SchemaService extends Component
 
         return match ($profile) {
             ResolveService::PROFILE_ARTICLE => $this->articleNode($base, $resolution, $title),
-            ResolveService::PROFILE_PERSON => [
-                '@type' => 'Person',
-                ...$base,
-                'worksFor' => ['@id' => $this->organizationId()],
-            ],
+            ResolveService::PROFILE_PERSON => $this->personNode($base, $resolution),
             ResolveService::PROFILE_CREATIVEWORK => [
                 '@type' => 'CreativeWork',
                 ...$base,
@@ -423,6 +433,78 @@ class SchemaService extends Component
             ResolveService::PROFILE_LOCALBUSINESS => $this->localBusinessNode($base),
             default => null,
         };
+    }
+
+    /**
+     * A person page: the profile of someone who works here.
+     *
+     * @param array<string, mixed> $base
+     * @return array<string, mixed>
+     */
+    private function personNode(array $base, MetaResolution $resolution): array
+    {
+        $node = [
+            '@type' => 'Person',
+            ...$base,
+            'worksFor' => ['@id' => $this->organizationId()],
+        ];
+
+        $element = $resolution->get('element');
+
+        if ($element instanceof ElementInterface) {
+            $functie = $this->fieldText($element, self::JOB_TITLE_FIELDS);
+            if ($functie !== '') {
+                $node['jobTitle'] = $functie;
+            }
+
+            $email = $this->fieldText($element, self::EMAIL_FIELDS);
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) !== false) {
+                $node['email'] = $email;
+            }
+        }
+
+        return $node;
+    }
+
+    /**
+     * The first non-empty value among a short list of field handles.
+     *
+     * Deliberately a tight list rather than a setting: these handles are
+     * unambiguous, and a schema detail buried three screens deep is a setting
+     * nobody would ever find. A handle that is not there simply yields
+     * nothing, which is the same as today.
+     *
+     * @param array<int, string> $handles
+     */
+    private function fieldText(ElementInterface $element, array $handles): string
+    {
+        $layout = $element->getFieldLayout();
+
+        if ($layout === null) {
+            return '';
+        }
+
+        foreach ($handles as $handle) {
+            if ($layout->getFieldByHandle($handle) === null) {
+                continue;
+            }
+
+            try {
+                $value = $element->getFieldValue($handle);
+            } catch (Throwable) {
+                continue;
+            }
+
+            if (is_string($value) || $value instanceof Stringable) {
+                $text = Text::plain((string)$value);
+
+                if ($text !== '') {
+                    return $text;
+                }
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -455,13 +537,73 @@ class SchemaService extends Component
         if ($author !== '') {
             // A named author is one of the few E-E-A-T signals that is both
             // machine readable and cheap to be honest about.
-            $node['author'] = [
-                '@type' => 'Person',
-                'name' => $author,
-            ];
+            $node['author'] = $this->authorNode($author);
         }
 
         return $node;
+    }
+
+    /**
+     * The author of an article, linked to their own page when the site has one.
+     *
+     * A name in an author field is a string. A name that points at a profile
+     * page is a person: somewhere to look for the experience and credentials
+     * behind the article. That link is the difference between claiming
+     * expertise and showing it, and it is the one part of E-E-A-T that can be
+     * expressed in markup at all.
+     *
+     * @return array<string, mixed>
+     */
+    private function authorNode(string $name): array
+    {
+        $node = ['@type' => 'Person', 'name' => $name];
+
+        $sleutel = mb_strtolower($name);
+
+        if (!array_key_exists($sleutel, self::$authorCache)) {
+            self::$authorCache[$sleutel] = $this->findPersonPage($name);
+        }
+
+        $url = self::$authorCache[$sleutel];
+
+        if ($url !== null) {
+            $node['@id'] = $url . '#person';
+            $node['url'] = $url;
+        }
+
+        return $node;
+    }
+
+    /**
+     * The URL of the page describing this person, if there is one.
+     */
+    private function findPersonPage(string $name): ?string
+    {
+        $resolve = Plugin::getInstance()?->getResolve();
+
+        if ($resolve === null) {
+            return null;
+        }
+
+        $entryTypeIds = $resolve->entryTypeIdsForProfile(ResolveService::PROFILE_PERSON);
+
+        if ($entryTypeIds === []) {
+            return null;
+        }
+
+        try {
+            $entry = Entry::find()
+                ->typeId($entryTypeIds)
+                ->title(Db::escapeParam($name))
+                ->uri(':notempty:')
+                ->one();
+
+            $url = $entry?->getUrl();
+        } catch (Throwable) {
+            return null;
+        }
+
+        return ($url === null || $url === '') ? null : Url::absolute($url);
     }
 
     /**
@@ -491,7 +633,30 @@ class SchemaService extends Component
             $node['email'] = $settings?->email;
         }
 
+        $openingstijden = $this->openingHours();
+        if ($openingstijden !== []) {
+            $node['openingHours'] = $openingstijden;
+        }
+
         return $node;
+    }
+
+    /**
+     * Opening hours in schema.org notation, one entry per line.
+     *
+     * @return array<int, string>
+     */
+    private function openingHours(): array
+    {
+        $ruw = (string)(Plugin::getInstance()?->getSettings()->openingHours ?? '');
+
+        if (trim($ruw) === '') {
+            return [];
+        }
+
+        $regels = preg_split('/[\r\n]+/', $ruw) ?: [];
+
+        return array_values(array_filter(array_map('trim', $regels)));
     }
 
     /**
