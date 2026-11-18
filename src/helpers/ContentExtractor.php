@@ -298,6 +298,12 @@ final class ContentExtractor
             return;
         }
 
+        // A guess must never be the expensive kind: see SocialImage::canTransform().
+        // A GIF somebody chose on purpose is still used, uncropped.
+        if (!SocialImage::canTransform((string)$asset->getExtension())) {
+            return;
+        }
+
         // An icon or a logo mark is not a sharing image. Anything narrower
         // than 600px comes out as a blurry smear in a social card.
         if (!$this->lenient && $asset->getWidth() !== null && $asset->getWidth() < 600) {

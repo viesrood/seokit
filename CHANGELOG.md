@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- A GIF is no longer cropped into a sharing image during the page request. An
+  animated GIF of a few megabytes took the request down with it (a 503 on
+  viesrood.nl) because the crop runs immediately and unpacks every frame. The
+  guesser now skips GIFs, and a GIF that was chosen on purpose is used as it
+  is, uncropped
+
 ## 1.0.0 - 2026-08-04
 
 First tagged release, running on viesrood.nl in place of SEOmatic. The four

@@ -22,6 +22,21 @@ final class SocialImage
     public const HEIGHT = 630;
 
     /**
+     * Whether an image of this type is safe to crop during a page request.
+     *
+     * A GIF is not. An animated one is unpacked frame by frame before it is
+     * cropped, and a few megabytes of animation becomes hundreds of megabytes
+     * of bitmap: the transform below runs immediately, so the request dies
+     * with it. The extension cannot tell an animated GIF from a still one,
+     * and finding out means reading the file, which on remote storage is the
+     * expensive part already.
+     */
+    public static function canTransform(string $extension): bool
+    {
+        return strtolower($extension) !== 'gif';
+    }
+
+    /**
      * @return array{url: string, width: int, height: int, alt: string}|null
      */
     public static function card(?Asset $asset): ?array
@@ -41,6 +56,27 @@ final class SocialImage
         $url = null;
         $width = null;
         $height = null;
+
+        if (!self::canTransform((string)$asset->getExtension())) {
+            try {
+                $url = $asset->getUrl();
+                $width = $asset->getWidth();
+                $height = $asset->getHeight();
+            } catch (Throwable) {
+                return null;
+            }
+
+            if ($url === null || $url === '') {
+                return null;
+            }
+
+            return [
+                'url' => $url,
+                'width' => (int)($width ?? self::WIDTH),
+                'height' => (int)($height ?? self::HEIGHT),
+                'alt' => (string)($asset->alt ?? $asset->title ?? ''),
+            ];
+        }
 
         try {
             // Craft honours the asset's focal point here, which is the whole
